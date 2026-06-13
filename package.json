@@ -1,0 +1,26 @@
+{
+  "name": "format-md-recipes",
+  "version": "0.0.1",
+  "description": "",
+  "homepage": "https://github.com/clusterberries/format-md-recipes#readme",
+  "bugs": {
+    "url": "https://github.com/clusterberries/format-md-recipes/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clusterberries/format-md-recipes.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "format": "node ./src/format-md.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "dotenv": "^16.0.0",
+    "openai": "^6.42.0"
+  }
+}
