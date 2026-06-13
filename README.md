@@ -29,3 +29,9 @@ Write formatted output to a file:
 ```bash
 npm run format -- -i recipes/source.md -o recipes/formatted.md
 ```
+
+Format all markdown files in a folder and write them to a destination folder with the same file names and relative paths preserved:
+
+```bash
+npm run format -- -i recipes/source-folder -d recipes/formatted-folder
+```
