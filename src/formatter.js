@@ -4,6 +4,10 @@ import { collectMarkdownFiles, getOutputPath, readFile, writeFile } from './file
 import { buildPrompt } from './prompt-builder.js';
 import { callOpenAI } from './openai-client.js';
 
+function getPrefixedOutputPath(inputPath) {
+    return path.join(path.dirname(inputPath), `formatted-${path.basename(inputPath)}`);
+}
+
 async function formatSingleFile(inputPath, outputPath, model, dryRun) {
   const inputText = await readFile(inputPath);
   const prompt = buildPrompt(inputText, { input: inputPath });
@@ -25,7 +29,7 @@ async function formatSingleFile(inputPath, outputPath, model, dryRun) {
 }
 
 export async function runFormatter(options) {
-  const { inputPath, output, dest, model, dryRun } = options;
+    const { inputPath, output, dest, rewrite, formattedPrefix, model, dryRun } = options;
 
   if (!path.isAbsolute(inputPath)) {
     throw new Error(`Input path must be absolute: ${inputPath}`);
@@ -35,8 +39,8 @@ export async function runFormatter(options) {
   const isDirectory = stats.isDirectory();
 
   if (isDirectory) {
-    if (!dest) {
-      throw new Error('When input is a directory, --dest <folder> is required.');
+      if (!rewrite && !dest && !formattedPrefix) {
+          throw new Error('When input is a directory, --dest <folder> is required unless --rewrite or --formatted-prefix is used.');
     }
 
     const markdownFiles = await collectMarkdownFiles(inputPath);
@@ -47,7 +51,11 @@ export async function runFormatter(options) {
 
     const writtenFiles = [];
     for (const filePath of markdownFiles) {
-      const outputPath = getOutputPath(filePath, inputPath, dest);
+        const outputPath = rewrite
+            ? filePath
+            : formattedPrefix
+                ? getPrefixedOutputPath(filePath)
+                : getOutputPath(filePath, inputPath, dest);
       const written = await formatSingleFile(filePath, outputPath, model, dryRun);
       if (written) {
         writtenFiles.push(written);
@@ -55,11 +63,21 @@ export async function runFormatter(options) {
     }
 
     if (!dryRun) {
-      console.log(`Formatted ${writtenFiles.length} markdown file(s) to ${dest}`);
+        if (rewrite) {
+            console.log(`Rewrote ${writtenFiles.length} markdown file(s) in place.`);
+        } else if (formattedPrefix) {
+            console.log(`Formatted ${writtenFiles.length} markdown file(s) with prefix formatted- in ${inputPath}`);
+        } else {
+          console.log(`Formatted ${writtenFiles.length} markdown file(s) to ${dest}`);
+      }
     }
   } else {
     let outputPath = null;
-    if (dest) {
+      if (rewrite) {
+          outputPath = inputPath;
+      } else if (formattedPrefix) {
+          outputPath = getPrefixedOutputPath(inputPath);
+      } else if (dest) {
       outputPath = path.resolve(dest, path.basename(inputPath));
     } else if (output) {
       outputPath = output;
@@ -67,7 +85,11 @@ export async function runFormatter(options) {
 
     const written = await formatSingleFile(inputPath, outputPath, model, dryRun);
     if (!dryRun && written) {
-      console.log(`Formatted markdown written to ${written}`);
+        if (rewrite) {
+            console.log(`Rewrote markdown file: ${written}`);
+        } else {
+          console.log(`Formatted markdown written to ${written}`);
+      }
     }
   }
 }
