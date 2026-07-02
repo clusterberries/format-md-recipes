@@ -1,7 +1,10 @@
 import path from 'path';
 import { program } from 'commander';
 
-const DEFAULT_MODEL = 'gpt-4o-mini';
+const DEFAULT_MODEL = 'gpt-5.5';
+// 'gpt-5.5' - good, precise, but slow
+// 'gpt-4.1' - in general not bad, but didn't move some notes to appropriate sections
+// 'gpt-5.4' and 'gpt-5.4-mini' - made some mistakes in formatting, but overall good
 
 export function parseOptions() {
   program

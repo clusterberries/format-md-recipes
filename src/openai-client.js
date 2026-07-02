@@ -13,14 +13,11 @@ export async function callOpenAI(prompt, model) {
       { role: 'system', content: 'You are a markdown formatter.' },
       { role: 'user', content: prompt },
     ],
-    temperature: 0.2,
-    max_completion_tokens: 2000,
+    // temperature: 0.2,
+    max_completion_tokens: 3000,
   });
 
-  const content = completion.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error('OpenAI returned an empty response.');
-  }
+  const content = completion.choices?.[0]?.message?.content ?? '';
 
   return content.trim();
 }
