@@ -1,11 +1,6 @@
 import path from 'path';
 import { program } from 'commander';
 
-const DEFAULT_MODEL = 'gpt-5.5';
-// 'gpt-5.5' - good, precise, but slow
-// 'gpt-4.1' - in general not bad, but didn't move some notes to appropriate sections
-// 'gpt-5.4' and 'gpt-5.4-mini' - made some mistakes in formatting, but overall good
-
 export function parseOptions() {
   program
     .name('format-md')
@@ -15,7 +10,6 @@ export function parseOptions() {
     .option('-d, --dest <folder>', 'output directory for input folder or input file')
     .option('--rewrite', 'rewrite the original file(s) in place instead of writing to a new file or folder')
     .option('--formatted-prefix', 'create a new formatted file in the same folder with prefix formatted-')
-    .option('-m, --model <model>', 'OpenAI model to use', DEFAULT_MODEL)
     .option('--dry-run', 'print output to stdout without writing a file')
     .parse(process.argv);
 
@@ -39,7 +33,6 @@ export function parseOptions() {
     dest: options.dest ? path.resolve(options.dest) : null,
     rewrite: Boolean(options.rewrite),
     formattedPrefix: Boolean(options.formattedPrefix),
-    model: options.model || DEFAULT_MODEL,
     dryRun: Boolean(options.dryRun),
   };
 }

@@ -1,8 +1,10 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { collectMarkdownFiles, getOutputPath, readFile, writeFile } from './file-utils.js';
-import { buildPrompt } from './prompt-builder.js';
+import { buildPrompt, buildScoutPrompt } from './prompt-builder.js';
 import { callOpenAI } from './openai-client.js';
+import { buildFormattingPlan, parseClassificationResult } from './model-routing.js';
+import { MINI_MODEL } from './constants.js';
 
 function logWarning(message) {
   const yellow = '\u001b[33m';
@@ -14,7 +16,7 @@ function getPrefixedOutputPath(inputPath) {
   return path.join(path.dirname(inputPath), `formatted-${path.basename(inputPath)}`);
 }
 
-async function formatSingleFile(inputPath, outputPath, model, dryRun) {
+async function formatSingleFile(inputPath, outputPath, dryRun) {
   const inputText = await readFile(inputPath);
   let formatted;
 
@@ -22,8 +24,21 @@ async function formatSingleFile(inputPath, outputPath, model, dryRun) {
     logWarning(`Input file is empty: ${inputPath}.`);
     formatted = '';
   } else {
-    const prompt = buildPrompt(inputText, { input: inputPath });
-    formatted = await callOpenAI(prompt, model);
+    const scoutPrompt = buildScoutPrompt(inputText);
+    const scoutResult = await callOpenAI(scoutPrompt, MINI_MODEL);
+    const classification = parseClassificationResult(scoutResult);
+    const plan = buildFormattingPlan(classification);
+
+    if (dryRun) {
+      console.log(`\n=== Dry run scout result for ${inputPath} ===`);
+      console.log(scoutResult + '\n');
+    } else {
+      console.log(
+        `Formatting file: ${inputPath} using model ${plan.model} (isRecipe: ${plan.isRecipe})`,
+      );
+      const prompt = buildPrompt(inputText, plan.isRecipe);
+      formatted = await callOpenAI(prompt, plan.model);
+    }
 
     if (formatted === '') {
       logWarning(`OpenAI returned no content for ${inputPath}.`);
@@ -31,8 +46,7 @@ async function formatSingleFile(inputPath, outputPath, model, dryRun) {
   }
 
   if (dryRun) {
-    console.log(`\n=== Dry run preview: ${inputPath} ===`);
-    process.stdout.write(formatted + '\n');
+    console.log(`\n=== Dry run preview: ${inputPath} ===\n`);
     return null;
   }
 
@@ -46,7 +60,7 @@ async function formatSingleFile(inputPath, outputPath, model, dryRun) {
 }
 
 export async function runFormatter(options) {
-  const { inputPath, output, dest, rewrite, formattedPrefix, model, dryRun } = options;
+  const { inputPath, output, dest, rewrite, formattedPrefix, dryRun } = options;
 
   if (!path.isAbsolute(inputPath)) {
     throw new Error(`Input path must be absolute: ${inputPath}`);
@@ -66,7 +80,7 @@ export async function runFormatter(options) {
       return;
     }
 
-    console.log(`${dryRun ? 'Dry run: ' : ''}Processing ${markdownFiles.length} markdown file(s) from ${inputPath} using model ${model}.`);
+    console.log(`${dryRun ? 'Dry run: ' : ''}Processing ${markdownFiles.length} markdown file(s) from ${inputPath}.`);
 
     const writtenFiles = [];
     let index = 0;
@@ -90,7 +104,7 @@ export async function runFormatter(options) {
 
       let written;
       try {
-        written = await formatSingleFile(filePath, outputPath, model, dryRun);
+        written = await formatSingleFile(filePath, outputPath, dryRun);
       } catch (error) {
         throw new Error(`Error formatting ${filePath}: ${error.message}`);
       }
@@ -121,12 +135,9 @@ export async function runFormatter(options) {
       outputPath = output;
     }
 
-    const actionLabel = dryRun ? 'Dry run' : rewrite ? 'Rewriting' : 'Formatting';
-    console.log(`${actionLabel} file: ${inputPath} using model ${model}.`);
-
     let written;
     try {
-      written = await formatSingleFile(inputPath, outputPath, model, dryRun);
+      written = await formatSingleFile(inputPath, outputPath, dryRun);
     } catch (error) {
       throw new Error(`Error formatting ${inputPath}: ${error.message}`);
     }
