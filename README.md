@@ -1,6 +1,6 @@
 # format-md-recipes
 
-A small Node.js toolkit for formatting recipes in markdown using the OpenAI API.
+A small Node.js toolkit for formatting or converting Markdown recipe files using OpenAI.
 
 ## Setup
 
@@ -18,44 +18,58 @@ npm install
 
 ## Usage
 
-Format a markdown file and print output to the terminal:
-
 ```bash
-npm run format -- -i recipes/source.md
+npm run format -- -i <input> [options]
 ```
 
-Write formatted output to a file:
+## Commands and options
 
-```bash
-npm run format -- -i recipes/source.md -o recipes/formatted.md
-```
+### Required
 
-Create a new formatted file in the same folder with a `formatted-` prefix:
+- `-i, --input <path>` — Path to the input Markdown file or directory.
 
-```bash
-npm run format -- -i recipes/source.md --formatted-prefix
-```
+### Output options
 
-Create new formatted files for all markdown files in a folder with `formatted-` prefix:
+- `-o, --output <path>` — Write the result to a specific output file. If omitted for a single file, output can be printed to stdout.
+- `-d, --dest <path>` — Write processed files to a destination directory. Useful when the input is a folder and you want to preserve file names and relative paths.
 
-```bash
-npm run format -- -i recipes/source-folder --formatted-prefix
-```
+### Write mode options
 
-Rewrite the original markdown file in place:
+- `--rewrite` — Rewrite the original file or files in place.
+- `--formatted-prefix` — Create new formatted files in the same folder using the `formatted-` prefix.
+
+### Preview option
+
+- `--dry-run` — Calls the model only to determine how the file should be handled, but does not call the main processing model, does not process the file itself, and does not write anything anywhere.
+
+## Option rules
+
+- `--output` and `--dest` cannot be used together.
+- `--rewrite` cannot be used with `--output` or `--dest`.
+- `--formatted-prefix` cannot be used with `--output`, `--dest`, or `--rewrite`.
+
+## Examples
+
+Rewrite the original file in place:
 
 ```bash
 npm run format -- -i recipes/source.md --rewrite
 ```
 
-Rewrite all markdown files in a folder in place:
+Create a new file in the same folder with the `formatted-` prefix:
 
 ```bash
-npm run format -- -i recipes/source-folder --rewrite
+npm run format -- -i recipes/source.md --formatted-prefix
 ```
 
-Format all markdown files in a folder and write them to a destination folder with the same file names and relative paths preserved:
+Process all Markdown files in a folder and write them to another folder:
 
 ```bash
 npm run format -- -i recipes/source-folder -d recipes/formatted-folder
+```
+
+Run a preview without processing the file or writing output:
+
+```bash
+npm run format -- -i recipes/source.md --dry-run
 ```
