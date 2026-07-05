@@ -1,5 +1,5 @@
-import { parseOptions } from './cli.js';
-import { runFormatter } from './formatter.js';
+import { parseOptions } from './cli.ts';
+import { runFormatter } from './formatter.ts';
 
 export async function run() {
   const options = parseOptions();

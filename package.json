@@ -15,12 +15,17 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "format": "node ./index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "node ./src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsc-check": "tsc --noEmit"
   },
   "dependencies": {
     "commander": "^11.0.0",
     "dotenv": "^16.0.0",
     "openai": "^6.42.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "typescript": "^6.0.3"
   }
 }

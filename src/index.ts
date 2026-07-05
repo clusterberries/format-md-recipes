@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
-import { run } from './src/index.js';
+import { run } from './format-md/index.ts';
 
 dotenv.config();
 

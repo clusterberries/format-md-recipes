@@ -1,4 +1,4 @@
-import { FULL_MODEL, MINI_MODEL, MEDIUM_MODEL } from './constants.js';
+import { FULL_MODEL, MINI_MODEL, MEDIUM_MODEL } from './constants.ts';
 
 function extractJsonObject(text) {
   const trimmed = text.trim();

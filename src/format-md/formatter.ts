@@ -1,10 +1,10 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { collectMarkdownFiles, getOutputPath, readFile, writeFile } from './file-utils.js';
-import { buildPrompt, buildScoutPrompt } from './prompt-builder.js';
-import { callOpenAI } from './openai-client.js';
-import { buildFormattingPlan, parseClassificationResult } from './model-routing.js';
-import { MINI_MODEL } from './constants.js';
+import { collectMarkdownFiles, getOutputPath, readFile, writeFile } from './file-utils.ts';
+import { buildPrompt, buildScoutPrompt } from './prompt-builder.ts';
+import { callOpenAI } from './openai-client.ts';
+import { buildFormattingPlan, parseClassificationResult } from './model-routing.ts';
+import { MINI_MODEL } from './constants.ts';
 
 function logWarning(message) {
   const yellow = '\u001b[33m';
