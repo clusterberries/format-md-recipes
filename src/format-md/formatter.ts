@@ -5,20 +5,28 @@ import { buildPrompt, buildScoutPrompt } from './prompt-builder.ts';
 import { callOpenAI } from './openai-client.ts';
 import { buildFormattingPlan, parseClassificationResult } from './model-routing.ts';
 import { MINI_MODEL } from './constants.ts';
+import type { CliOptions } from './types.ts';
 
-function logWarning(message) {
+function logWarning(message: string) {
   const yellow = '\u001b[33m';
   const reset = '\u001b[0m';
   console.warn(`⚠️  ${yellow}Warning:${reset} ${message}`);
 }
 
-function getPrefixedOutputPath(inputPath) {
-  return path.join(path.dirname(inputPath), `formatted-${path.basename(inputPath)}`);
+function getPrefixedOutputPath(inputPath: string) {
+  return path.join(
+    path.dirname(inputPath),
+    `formatted-${path.basename(inputPath)}`,
+  );
 }
 
-async function formatSingleFile(inputPath, outputPath, dryRun) {
+async function formatSingleFile(
+  inputPath: string,
+  outputPath: string | null,
+  dryRun: boolean,
+) {
   const inputText = await readFile(inputPath);
-  let formatted;
+  let formatted = '';
 
   if (!inputText || inputText.trim() === '') {
     logWarning(`Input file is empty: ${inputPath}.`);
@@ -59,7 +67,7 @@ async function formatSingleFile(inputPath, outputPath, dryRun) {
   return null;
 }
 
-export async function runFormatter(options) {
+export async function runFormatter(options: CliOptions) {
   const { inputPath, output, dest, rewrite, formattedPrefix, dryRun } = options;
 
   if (!path.isAbsolute(inputPath)) {
@@ -71,7 +79,9 @@ export async function runFormatter(options) {
 
   if (isDirectory) {
     if (!rewrite && !dest && !formattedPrefix) {
-      throw new Error('When input is a directory, --dest <folder> is required unless --rewrite or --formatted-prefix is used.');
+      throw new Error(
+        'When input is a directory, --dest <folder> is required unless --rewrite or --formatted-prefix is used.',
+      );
     }
 
     const markdownFiles = await collectMarkdownFiles(inputPath);
@@ -80,7 +90,9 @@ export async function runFormatter(options) {
       return;
     }
 
-    console.log(`${dryRun ? 'Dry run: ' : ''}Processing ${markdownFiles.length} markdown file(s) from ${inputPath}.`);
+    console.log(
+      `${dryRun ? 'Dry run: ' : ''}Processing ${markdownFiles.length} markdown file(s) from ${inputPath}.`,
+    );
 
     const writtenFiles = [];
     let index = 0;
@@ -90,10 +102,12 @@ export async function runFormatter(options) {
         ? filePath
         : formattedPrefix
           ? getPrefixedOutputPath(filePath)
-          : getOutputPath(filePath, inputPath, dest);
+          : getOutputPath(filePath, inputPath, dest ?? '');
 
       const relativeInputPath = path.relative(inputPath, filePath);
-      const relativeOutputPath = outputPath ? path.relative(inputPath, outputPath) : null;
+      const relativeOutputPath = outputPath
+        ? path.relative(inputPath, outputPath)
+        : null;
       const progressMessage = dryRun
         ? `Dry run ${index}/${markdownFiles.length}: ${relativeInputPath}`
         : rewrite
@@ -105,7 +119,7 @@ export async function runFormatter(options) {
       let written;
       try {
         written = await formatSingleFile(filePath, outputPath, dryRun);
-      } catch (error) {
+      } catch (error: any) {
         throw new Error(`Error formatting ${filePath}: ${error.message}`);
       }
 
@@ -116,11 +130,17 @@ export async function runFormatter(options) {
 
     if (!dryRun) {
       if (rewrite) {
-        console.log(`✅ Rewrote ${writtenFiles.length} markdown file(s) in place.`);
+        console.log(
+          `✅ Rewrote ${writtenFiles.length} markdown file(s) in place.`,
+        );
       } else if (formattedPrefix) {
-        console.log(`✅ Formatted ${writtenFiles.length} markdown file(s) with prefix formatted- in ${inputPath}`);
+        console.log(
+          `✅ Formatted ${writtenFiles.length} markdown file(s) with prefix formatted- in ${inputPath}`,
+        );
       } else {
-        console.log(`✅ Formatted ${writtenFiles.length} markdown file(s) to ${dest}`);
+        console.log(
+          `✅ Formatted ${writtenFiles.length} markdown file(s) to ${dest}`,
+        );
       }
     }
   } else {
@@ -138,7 +158,7 @@ export async function runFormatter(options) {
     let written;
     try {
       written = await formatSingleFile(inputPath, outputPath, dryRun);
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(`Error formatting ${inputPath}: ${error.message}`);
     }
 

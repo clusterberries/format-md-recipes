@@ -405,11 +405,11 @@ tags:
 """
 `;
 
-export function buildScoutPrompt(content) {
+export function buildScoutPrompt(content: string) {
   return SCOUT_PROMPT.replace('{{RECIPE_CONTENT}}', content);
 }
 
-export function buildPrompt(content, isRecipe) {
+export function buildPrompt(content: string, isRecipe: boolean) {
   const template = isRecipe ? RECIPE_FORMAT_PROMPT : NOTES_FORMAT_PROMPT;
   return template.replace('{{RECIPE_CONTENT}}', content);
 }

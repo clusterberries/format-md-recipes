@@ -1,6 +1,7 @@
 import { FULL_MODEL, MINI_MODEL, MEDIUM_MODEL } from './constants.ts';
+import type { ClassificationResult, Complexity } from './types.ts';
 
-function extractJsonObject(text) {
+function extractJsonObject(text: string): ClassificationResult | null {
   const trimmed = text.trim();
   if (!trimmed) {
     return null;
@@ -20,8 +21,9 @@ function extractJsonObject(text) {
   }
 }
 
-//   "complexity": "simple|moderate|complex",
-export function parseClassificationResult(rawResult) {
+export function parseClassificationResult(
+  rawResult: string,
+): ClassificationResult {
   const parsed = extractJsonObject(rawResult);
 
   return {
@@ -31,7 +33,7 @@ export function parseClassificationResult(rawResult) {
   };
 }
 
-const getModelForComplexity = (complexity) => {
+const getModelForComplexity = (complexity?: Complexity) => {
   switch (complexity) {
     case 'simple':
       return MINI_MODEL;
@@ -42,9 +44,9 @@ const getModelForComplexity = (complexity) => {
   }
 };
 
-export function buildFormattingPlan(classification = {}) {
+export function buildFormattingPlan(classification: ClassificationResult) {
   return {
-    ...classification,
-    model: getModelForComplexity(classification.complexity),
+    ...classification ,
+    model: getModelForComplexity(classification?.complexity),
   };
 }

@@ -1,9 +1,11 @@
 import OpenAI from 'openai';
 
-export async function callOpenAI(prompt, model) {
+export async function callOpenAI(prompt: string, model: string) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error('OPENAI_API_KEY is required. Set it in your environment or in a .env file.');
+    throw new Error(
+      'OPENAI_API_KEY is required. Set it in your environment or in a .env file.',
+    );
   }
 
   const client = new OpenAI({ apiKey });

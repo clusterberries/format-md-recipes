@@ -4,7 +4,7 @@ import { run } from './format-md/index.ts';
 
 dotenv.config();
 
-run().catch((error) => {
+run().catch((error: Error) => {
   console.error('Error:', error.message);
   process.exit(1);
 });
