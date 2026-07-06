@@ -1,17 +1,20 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { collectMarkdownFiles, getOutputPath, readFile, writeFile } from './file-utils.ts';
+import {
+  collectMarkdownFiles,
+  getOutputPath,
+  readFile,
+  writeFile,
+} from '../shared/file-utils.ts';
 import { buildPrompt, buildScoutPrompt } from './prompt-builder.ts';
 import { callOpenAI } from './openai-client.ts';
-import { buildFormattingPlan, parseClassificationResult } from './model-routing.ts';
+import {
+  buildFormattingPlan,
+  parseClassificationResult,
+} from './model-routing.ts';
 import { MINI_MODEL } from './constants.ts';
 import type { CliOptions } from './types.ts';
-
-function logWarning(message: string) {
-  const yellow = '\u001b[33m';
-  const reset = '\u001b[0m';
-  console.warn(`⚠️  ${yellow}Warning:${reset} ${message}`);
-}
+import { logWarning } from '../shared/utils.ts';
 
 function getPrefixedOutputPath(inputPath: string) {
   return path.join(
@@ -46,10 +49,10 @@ async function formatSingleFile(
       );
       const prompt = buildPrompt(inputText, plan.isRecipe);
       formatted = await callOpenAI(prompt, plan.model);
-    }
 
-    if (formatted === '') {
-      logWarning(`OpenAI returned no content for ${inputPath}.`);
+      if (formatted === '') {
+        logWarning(`OpenAI returned no content for ${inputPath}.`);
+      }
     }
   }
 

@@ -47,6 +47,6 @@ const getModelForComplexity = (complexity?: Complexity) => {
 export function buildFormattingPlan(classification: ClassificationResult) {
   return {
     ...classification ,
-    model: getModelForComplexity(classification?.complexity),
+    model: getModelForComplexity(classification.complexity),
   };
 }

@@ -15,7 +15,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "format": "node ./src/index.ts",
+    "format": "node ./src/format.ts",
+    "parse-url": "node ./src/parse-url.ts",
+    "format-list": "node ./src/format-list.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsc-check": "tsc --noEmit"
   },

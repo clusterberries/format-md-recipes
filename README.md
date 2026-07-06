@@ -16,39 +16,39 @@ OPENAI_API_KEY=your_api_key_here
 npm install
 ```
 
-## Usage
+## Format MD - Usage
 
 ```bash
 npm run format -- -i <input> [options]
 ```
 
-## Commands and options
+### Commands and options
 
-### Required
+#### Required
 
 - `-i, --input <path>` — Path to the input Markdown file or directory.
 
-### Output options
+#### Output options
 
 - `-o, --output <path>` — Write the result to a specific output file. If omitted for a single file, output can be printed to stdout.
 - `-d, --dest <path>` — Write processed files to a destination directory. Useful when the input is a folder and you want to preserve file names and relative paths.
 
-### Write mode options
+#### Write mode options
 
 - `--rewrite` — Rewrite the original file or files in place.
 - `--formatted-prefix` — Create new formatted files in the same folder using the `formatted-` prefix.
 
-### Preview option
+#### Preview option
 
 - `--dry-run` — Calls the model only to determine how the file should be handled, but does not call the main processing model, does not process the file itself, and does not write anything anywhere.
 
-## Option rules
+### Option rules
 
 - `--output` and `--dest` cannot be used together.
 - `--rewrite` cannot be used with `--output` or `--dest`.
 - `--formatted-prefix` cannot be used with `--output`, `--dest`, or `--rewrite`.
 
-## Examples
+### Examples
 
 Rewrite the original file in place:
 
@@ -73,3 +73,15 @@ Run a preview without processing the file or writing output:
 ```bash
 npm run format -- -i recipes/source.md --dry-run
 ```
+
+## Format list - Usage
+
+This is a script to format text files with lists in a specific format.
+
+```
+npm run format-list -- -i <input> [options]
+```
+
+### Options
+
+- `--dry-run` — prints the result to stdout without writing to a file.
