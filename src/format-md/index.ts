@@ -3,5 +3,5 @@ import { runFormatter } from './formatter.ts';
 
 export async function run() {
   const options = parseOptions();
-    await runFormatter(options);
+  await runFormatter(options);
 }

@@ -7,12 +7,12 @@ import {
   writeFile,
 } from '../shared/file-utils.ts';
 import { buildPrompt, buildScoutPrompt } from './prompt-builder.ts';
-import { callOpenAI } from './openai-client.ts';
+import { callOpenAI } from '../shared/openai-client.ts';
 import {
   buildFormattingPlan,
   parseClassificationResult,
 } from './model-routing.ts';
-import { MINI_MODEL } from './constants.ts';
+import { MINI_MODEL } from '../shared/constants.ts';
 import type { CliOptions } from './types.ts';
 import { logWarning } from '../shared/utils.ts';
 

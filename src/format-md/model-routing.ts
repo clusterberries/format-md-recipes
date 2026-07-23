@@ -1,4 +1,4 @@
-import { FULL_MODEL, MINI_MODEL, MEDIUM_MODEL } from './constants.ts';
+import { FULL_MODEL, MINI_MODEL, MEDIUM_MODEL } from '../shared/constants.ts';
 import type { ClassificationResult, Complexity } from './types.ts';
 
 function extractJsonObject(text: string): ClassificationResult | null {
@@ -46,7 +46,7 @@ const getModelForComplexity = (complexity?: Complexity) => {
 
 export function buildFormattingPlan(classification: ClassificationResult) {
   return {
-    ...classification ,
+    ...classification,
     model: getModelForComplexity(classification.complexity),
   };
 }
