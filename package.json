@@ -23,18 +23,21 @@
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
+    "@truto/turndown-plugin-gfm": "^1.0.3",
     "cheerio": "^1.2.0",
     "commander": "^11.0.0",
     "dotenv": "^16.0.0",
     "html-encoding-sniffer": "^6.0.0",
     "iconv-lite": "^0.7.3",
     "jsdom": "^29.1.1",
-    "openai": "^6.42.0"
+    "openai": "^6.42.0",
+    "turndown": "^7.2.4"
   },
   "devDependencies": {
     "@types/html-encoding-sniffer": "^3.0.2",
     "@types/jsdom": "^28.0.3",
     "@types/node": "^26.1.0",
+    "@types/turndown": "^5.0.6",
     "typescript": "^6.0.3"
   }
 }

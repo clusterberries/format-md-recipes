@@ -7,6 +7,7 @@ import { logWarning } from '../shared/utils.ts';
 import { parseRecipePage } from './page-parser.ts';
 import { cleanRecipeContent } from './html-cleaner/index.ts';
 import { extractRecipeImages } from './images-parser/index.ts';
+import { convertRecipeHtmlToMarkdown } from './markdown-converter.ts';
 
 async function formatWithOpenAI(inputText: string, inputUrl: string) {
   let formatted = '';
@@ -39,13 +40,12 @@ export async function runUrlContentFormatter(options: CliOptions) {
       const contentHtml = cleanRecipeContent(
         originalContentHtml,
         'recipe-only',
-      );
+      )?.trim();
 
-      const hasContent = contentHtml && contentHtml.trim() !== '';
       const hasRecipeSchema =
         content.recipe && Object.keys(content.recipe).length > 0;
 
-      if (!hasContent && !hasRecipeSchema) {
+      if (!contentHtml && !hasRecipeSchema) {
         logWarning(`No content or recipe schema found for ${inputUrl}.`);
         return;
       }
@@ -56,11 +56,20 @@ export async function runUrlContentFormatter(options: CliOptions) {
         content.recipe ?? {},
       );
 
+      let markdown: string | undefined;
+
+      if (contentHtml) {
+        markdown = convertRecipeHtmlToMarkdown(contentHtml, {
+          mainImage: images.mainImage ?? null,
+          imagePosition: 'bottom',
+        })?.trim();
+      }
+
       if (output) {
-        if (!hasContent) {
+        if (!markdown) {
           logWarning(`Content is empty for ${inputUrl}.`);
         } else {
-          writeFile(output, contentHtml);
+          writeFile(output, markdown);
           console.log(`✅ Saved to ${output}`);
         }
       } else {
@@ -72,7 +81,7 @@ export async function runUrlContentFormatter(options: CliOptions) {
               title: content.article?.title ?? null,
               excerpt: content.article?.excerpt ?? null,
               images: images,
-              content: hasContent ? `${contentHtml?.slice(0, 100)}...` : null, // Log the first 100 characters of the content
+              content: markdown ? `${markdown?.slice(0, 100)}...` : null, // Log the first 100 characters of the content
             },
             null,
             2,
