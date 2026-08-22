@@ -58,7 +58,6 @@ function extractRecipeSchema(doc: Document): RecipeSchema | null {
 
     if (!text) continue;
 
-    console.log('script text:', text?.slice(0, 100)); // Log the first 100 characters of the script content
     let json: unknown;
 
     try {

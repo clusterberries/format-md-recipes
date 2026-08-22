@@ -5,6 +5,7 @@ import { MINI_MODEL } from '../shared/constants.ts';
 import type { CliOptions } from './types.ts';
 import { logWarning } from '../shared/utils.ts';
 import { parseRecipePage } from './page-parser.ts';
+import { cleanRecipeContent } from './html-cleaner/clean-content.ts';
 
 async function formatWithOpenAI(inputText: string, inputUrl: string) {
   let formatted = '';
@@ -26,9 +27,6 @@ async function formatWithOpenAI(inputText: string, inputUrl: string) {
   return formatted;
 }
 
-// TODO: convert to MD, remove unnecessary info if possible
-// TODO: send to OpenAI for formatting and update prompt
-// TODO: support multiple URLs in a single run
 export async function runUrlContentFormatter(options: CliOptions) {
   const { inputUrl, output } = options;
 
@@ -36,16 +34,33 @@ export async function runUrlContentFormatter(options: CliOptions) {
     const content = await parseRecipePage(inputUrl);
 
     if (content) {
+      const originalContentHtml = content.article?.contentHtml?.trim() ?? '';
+      const contentHtml = cleanRecipeContent(
+        originalContentHtml,
+        'recipe-only',
+      );
+
       if (output) {
-        writeFile(output, content.article?.contentHtml ?? '');
-        console.log(`✅ Saved to ${output}`);
+        if (!contentHtml || contentHtml.trim() === '') {
+          logWarning(`Content is empty for ${inputUrl}.`);
+        } else {
+          writeFile(output, contentHtml);
+          console.log(`✅ Saved to ${output}`);
+        }
       } else {
         console.log('✅ Output sent to stdout.');
-        console.log({
-          recipe: content.recipe,
-          title: content?.article?.title ?? null,
-          excerpt: content?.article?.excerpt ?? null,
-        });
+        console.log(
+          JSON.stringify(
+            {
+              recipe: content.recipe,
+              title: content.article?.title ?? null,
+              excerpt: content.article?.excerpt ?? null,
+              content: contentHtml ? `${contentHtml?.slice(0, 100)}...` : null, // Log the first 100 characters of the content
+            },
+            null,
+            2,
+          ),
+        );
       }
     }
   } catch (error: any) {
