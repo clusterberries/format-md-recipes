@@ -5,7 +5,8 @@ import { MINI_MODEL } from '../shared/constants.ts';
 import type { CliOptions } from './types.ts';
 import { logWarning } from '../shared/utils.ts';
 import { parseRecipePage } from './page-parser.ts';
-import { cleanRecipeContent } from './html-cleaner/clean-content.ts';
+import { cleanRecipeContent } from './html-cleaner/index.ts';
+import { extractRecipeImages } from './images-parser/index.ts';
 
 async function formatWithOpenAI(inputText: string, inputUrl: string) {
   let formatted = '';
@@ -40,8 +41,23 @@ export async function runUrlContentFormatter(options: CliOptions) {
         'recipe-only',
       );
 
+      const hasContent = contentHtml && contentHtml.trim() !== '';
+      const hasRecipeSchema =
+        content.recipe && Object.keys(content.recipe).length > 0;
+
+      if (!hasContent && !hasRecipeSchema) {
+        logWarning(`No content or recipe schema found for ${inputUrl}.`);
+        return;
+      }
+
+      const images = extractRecipeImages(
+        contentHtml,
+        inputUrl,
+        content.recipe ?? {},
+      );
+
       if (output) {
-        if (!contentHtml || contentHtml.trim() === '') {
+        if (!hasContent) {
           logWarning(`Content is empty for ${inputUrl}.`);
         } else {
           writeFile(output, contentHtml);
@@ -55,7 +71,8 @@ export async function runUrlContentFormatter(options: CliOptions) {
               recipe: content.recipe,
               title: content.article?.title ?? null,
               excerpt: content.article?.excerpt ?? null,
-              content: contentHtml ? `${contentHtml?.slice(0, 100)}...` : null, // Log the first 100 characters of the content
+              images: images,
+              content: hasContent ? `${contentHtml?.slice(0, 100)}...` : null, // Log the first 100 characters of the content
             },
             null,
             2,

@@ -9,8 +9,7 @@ import {
 } from './noise-remover.ts';
 import { HARD_REMOVE_SELECTOR } from './constants.ts';
 import { normalizeHtml } from './utils.ts';
-
-export type CleanupMode = 'minimal' | 'recipe-only';
+import type { CleanupMode } from './types.ts';
 
 /**
  * Selects the likely main content, removes technical and non-recipe noise,

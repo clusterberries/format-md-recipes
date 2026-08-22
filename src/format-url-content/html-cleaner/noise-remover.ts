@@ -13,7 +13,7 @@ import {
   RECIPE_PROTECTION_SELECTOR,
 } from './constants.ts';
 import { getFingerprint, getLinkDensity, normalizeText } from './utils.ts';
-import type { CleanupMode } from './clean-content.ts';
+import type { CleanupMode } from './types.ts';
 
 const NAMED_NOISE_ATTRIBUTE_SELECTOR =
   '[id], [class], [data-testid], [data-test], [role]';
