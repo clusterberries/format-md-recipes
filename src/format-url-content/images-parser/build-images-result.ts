@@ -13,7 +13,8 @@ export function buildRecipeImagesResult(
   const mainImage =
     schemaMainImages[0] ??
     chooseBestHtmlMainImage(htmlCandidates) ??
-    schemaStepImages[0];
+    chooseLastStepImage(htmlCandidates) ??
+    schemaStepImages.at(-1);
   const stepImages = mergeStepImages({
     schemaStepImages,
     htmlCandidates,
@@ -30,11 +31,27 @@ export function buildRecipeImagesResult(
 }
 
 function chooseBestHtmlMainImage(
-  candidates: RecipeImage[],
+  candidates: HtmlImageCandidate[],
 ): RecipeImage | undefined {
   return [...candidates]
+    .filter((candidate) => candidate.stepIndex === undefined)
     .sort((a, b) => b.score - a.score)
     .find((candidate) => candidate.score > -50);
+}
+
+function chooseLastStepImage(
+  candidates: HtmlImageCandidate[],
+): HtmlImageCandidate | undefined {
+  return [...candidates]
+    .filter(
+      (candidate): candidate is HtmlImageCandidate & { stepIndex: number } =>
+        typeof candidate.stepIndex === 'number' && candidate.score > -50,
+    )
+    .sort((a, b) =>
+      a.stepIndex === b.stepIndex
+        ? b.documentIndex - a.documentIndex
+        : b.stepIndex - a.stepIndex,
+    )[0];
 }
 
 function mergeStepImages(params: {

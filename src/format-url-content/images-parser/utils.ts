@@ -7,11 +7,20 @@ const TRACKING_URL_PATTERN =
   /\b(pixel|tracking|analytics|doubleclick|googlesyndication|adservice)\b/i;
 
 export function isUsableImageUrl(url: string): boolean {
+  let location: string;
+
+  try {
+    const parsedUrl = new URL(url);
+    location = `${parsedUrl.pathname}${parsedUrl.search}`;
+  } catch {
+    return false;
+  }
+
   return (
     !url.startsWith('data:') &&
-    !BAD_IMAGE_EXTENSION_PATTERN.test(url) &&
-    !TRACKING_URL_PATTERN.test(url) &&
-    !NOISE_PATTERN.test(url)
+    !BAD_IMAGE_EXTENSION_PATTERN.test(location) &&
+    !TRACKING_URL_PATTERN.test(location) &&
+    !NOISE_PATTERN.test(location)
   );
 }
 

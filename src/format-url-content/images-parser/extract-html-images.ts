@@ -207,9 +207,9 @@ function getImageFingerprint($: cheerio.CheerioAPI, image: Element): string {
     ),
     $image.attr('alt'),
     $image.attr('title'),
-    $image.attr('src'),
-    $image.attr('data-src'),
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function getElementFingerprint($: cheerio.CheerioAPI, element?: Element): string {
