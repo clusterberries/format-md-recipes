@@ -12,7 +12,15 @@ const projectRoot = process.cwd();
 const fixturesDirectory = path.join(projectRoot, 'tests', 'fixtures');
 const cliPath = path.join(projectRoot, 'src', 'format-url-content.ts');
 
-const fixtures = ['basic-recipe-en', 'test1-ru', 'test2-ru'];
+const fixtures = [
+  'basic-recipe-en',
+  'test1-ru',
+  'test2-ru',
+  'test3-ru',
+  'test4-ru',
+  'test5-ru',
+  'test6-ru',
+];
 
 const server = createServer((request, response) => {
   const fixtureName = request.url?.slice(1);
