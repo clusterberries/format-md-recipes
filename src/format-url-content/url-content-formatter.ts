@@ -1,39 +1,27 @@
 import { writeFile } from '../shared/file-utils.ts';
-import { buildPrompt } from './prompt-builder.ts';
-import { callOpenAI } from '../shared/openai-client.ts';
-import { MINI_MODEL } from '../shared/constants.ts';
 import type { CliOptions } from './types.ts';
 import { logWarning } from '../shared/utils.ts';
 import { parseRecipePage } from './page-parser.ts';
 import { cleanRecipeContent } from './html-cleaner/index.ts';
-import { extractRecipeImages } from './images-parser/index.ts';
-import { convertRecipeHtmlToMarkdown } from './markdown-converter.ts';
-
-async function formatWithOpenAI(inputText: string, inputUrl: string) {
-  let formatted = '';
-
-  if (!inputText || inputText.trim() === '') {
-    logWarning(`Content is empty for ${inputUrl}.`);
-    formatted = '';
-  } else {
-    const prompt = buildPrompt(inputText);
-    formatted = await callOpenAI(prompt, MINI_MODEL);
-
-    if (formatted === '') {
-      logWarning(`OpenAI returned no content for ${inputUrl}.`);
-    }
-  }
-
-  process.stdout.write(formatted + '\n');
-
-  return formatted;
-}
+import { renderRecipeMarkdown } from './recipe-markdown-renderer.ts';
+import { resolveRecipeConflicts } from './ai-conflict-resolver.ts';
 
 export async function runUrlContentFormatter(options: CliOptions) {
   const { inputUrl, output } = options;
 
   try {
     const content = await parseRecipePage(inputUrl);
+    const aiResult = options.noAi
+      ? {
+          recipe: content.reconciledRecipe,
+          called: false,
+          applied: false,
+          reasons: [],
+        }
+      : await resolveRecipeConflicts(
+          content.reconciledRecipe,
+          content.sources.candidates,
+        );
 
     if (content) {
       const originalContentHtml = content.article?.contentHtml?.trim() ?? '';
@@ -44,32 +32,24 @@ export async function runUrlContentFormatter(options: CliOptions) {
 
       const hasRecipeSchema =
         content.recipe && Object.keys(content.recipe).length > 0;
+      const hasRecipeCandidate = content.sources.candidates.length > 0;
 
-      if (!contentHtml && !hasRecipeSchema) {
+      if (!contentHtml && !hasRecipeSchema && !hasRecipeCandidate) {
         logWarning(`No content or recipe schema found for ${inputUrl}.`);
         return;
       }
 
-      const images = extractRecipeImages(
-        contentHtml,
-        inputUrl,
-        content.recipe ?? {},
-      );
+      const images = content.sources.images;
 
-      let markdown: string | undefined;
-
-      if (contentHtml) {
-        markdown = convertRecipeHtmlToMarkdown(contentHtml, {
-          mainImage: images.mainImage ?? null,
-          imagePosition: 'bottom',
-        })?.trim();
-      }
+      const markdown = renderRecipeMarkdown(aiResult.recipe, {
+        imagePosition: 'bottom',
+      });
 
       if (output) {
         if (!markdown) {
           logWarning(`Content is empty for ${inputUrl}.`);
         } else {
-          writeFile(output, markdown);
+          await writeFile(output, markdown);
           console.log(`✅ Saved to ${output}`);
         }
       } else {
@@ -81,6 +61,10 @@ export async function runUrlContentFormatter(options: CliOptions) {
               title: content.article?.title ?? null,
               excerpt: content.article?.excerpt ?? null,
               images: images,
+              candidates: content.sources.candidates,
+              normalizedRecipe: content.normalizedRecipe,
+              reconciledRecipe: aiResult.recipe,
+              ai: aiResult,
               content: markdown ? `${markdown?.slice(0, 100)}...` : null, // Log the first 100 characters of the content
             },
             null,

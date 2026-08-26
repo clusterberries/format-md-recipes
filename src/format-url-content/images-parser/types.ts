@@ -2,7 +2,7 @@ export interface RecipeSchema {
   [key: string]: unknown;
 }
 
-export type ImageSource = 'schema-main' | 'schema-step' | 'html';
+export type ImageSource = 'schema-main' | 'schema-step' | 'html' | 'metadata';
 
 export type RecipeImage = {
   url: string;
@@ -11,6 +11,8 @@ export type RecipeImage = {
   source: ImageSource;
   /* Heuristic ranking used to choose between image candidates. */
   score: number;
+  isFallback?: boolean;
+  fallbackReason?: 'best-main' | 'last-step';
 };
 
 export type StepImage = RecipeImage & {
@@ -23,7 +25,7 @@ export type ExtractRecipeImagesResult = {
   mainImage?: RecipeImage;
   /* Images associated with individual recipe steps. */
   stepImages: StepImage[];
-  /* All usable images found in the cleaned HTML. */
+  /* All usable images found in the original HTML and metadata. */
   htmlCandidates: RecipeImage[];
 };
 

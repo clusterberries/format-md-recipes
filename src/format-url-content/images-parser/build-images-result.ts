@@ -9,12 +9,20 @@ export function buildRecipeImagesResult(
   schemaMainImages: RecipeImage[],
   schemaStepImages: StepImage[],
   htmlCandidates: HtmlImageCandidate[],
+  metadataImages: RecipeImage[] = [],
 ): ExtractRecipeImagesResult {
-  const mainImage =
-    schemaMainImages[0] ??
-    chooseBestHtmlMainImage(htmlCandidates) ??
-    chooseLastStepImage(htmlCandidates) ??
-    schemaStepImages.at(-1);
+  const explicitMainImage = schemaMainImages[0];
+  const associatedMainImage = chooseBestHtmlMainImage([
+    ...htmlCandidates,
+    ...metadataImages,
+  ]);
+  const bestStepFallback =
+    chooseLastStepImage(htmlCandidates) ?? schemaStepImages.at(-1);
+  const mainImage = explicitMainImage
+    ? explicitMainImage
+    : associatedMainImage
+      ? markFallbackImage(associatedMainImage, 'best-main')
+      : markFallbackImage(bestStepFallback, 'last-step');
   const stepImages = mergeStepImages({
     schemaStepImages,
     htmlCandidates,
@@ -30,11 +38,25 @@ export function buildRecipeImagesResult(
   };
 }
 
+function markFallbackImage(
+  image: RecipeImage | undefined,
+  reason: 'best-main' | 'last-step',
+): RecipeImage | undefined {
+  if (!image) return undefined;
+
+  return {
+    ...image,
+    isFallback: true,
+    fallbackReason: reason,
+    score: Math.min(image.score, 250),
+  };
+}
+
 function chooseBestHtmlMainImage(
-  candidates: HtmlImageCandidate[],
+  candidates: RecipeImage[],
 ): RecipeImage | undefined {
   return [...candidates]
-    .filter((candidate) => candidate.stepIndex === undefined)
+    .filter((candidate) => !('stepIndex' in candidate))
     .sort((a, b) => b.score - a.score)
     .find((candidate) => candidate.score > -50);
 }
@@ -85,7 +107,16 @@ function mergeStepImages(params: {
     }
   }
 
-  return [...uniqueImages.values()].sort((a, b) => {
+  const bestImageByStep = new Map<number, StepImage>();
+
+  for (const image of uniqueImages.values()) {
+    const existing = bestImageByStep.get(image.stepIndex);
+    if (!existing || image.score > existing.score) {
+      bestImageByStep.set(image.stepIndex, image);
+    }
+  }
+
+  return [...bestImageByStep.values()].sort((a, b) => {
     if (a.stepIndex !== b.stepIndex) {
       return a.stepIndex - b.stepIndex;
     }

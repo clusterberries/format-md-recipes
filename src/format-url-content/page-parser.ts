@@ -2,129 +2,274 @@ import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import iconv from 'iconv-lite';
 import sniffHTMLEncoding from 'html-encoding-sniffer';
-import type { ParsedRecipePage, RecipeSchema } from './types.ts';
+import { extractIndependentSources } from './source-extractor.ts';
+import { extractNormalizedRecipe } from './field-extractor.ts';
+import { reconcileRecipe } from './reconciler.ts';
+import type { PageMetadata, ParsedRecipePage } from './types.ts';
+
+const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
+const MAX_FETCH_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 250;
+
+class RetryableFetchError extends Error {}
 
 export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
-  const response = await fetch(url, {
-    headers: {
-      // Some sites reject requests without a browser-like UA.
-      'User-Agent':
-        'Mozilla/5.0 (compatible; RecipeParser/1.0; +https://example.com)',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
-    );
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-
+  const { response, buffer, contentType } = await fetchPageWithRetry(url);
   const encoding = sniffHTMLEncoding(buffer, {
-    transportLayerEncodingLabel:
-      response.headers.get('content-type') ?? undefined,
+    transportLayerEncodingLabel: contentType ?? undefined,
     defaultEncoding: 'windows-1252',
   });
 
   const html = iconv.decode(buffer, encoding);
-  const dom = new JSDOM(html, { url });
+  const finalUrl = response.url || url;
+  const dom = new JSDOM(html, { url: finalUrl });
 
-  // Extract Recipe JSON-LD
-  const recipe = extractRecipeSchema(dom.window.document);
+  const metadata = extractPageMetadata(
+    dom.window.document,
+    finalUrl,
+    encoding,
+    contentType,
+  );
 
   // Extract main article
   const article = new Readability(dom.window.document).parse();
+  const parsedArticle = article
+    ? {
+        title: article.title ?? null,
+        excerpt: article.excerpt ?? null,
+        contentHtml: article.content ?? '',
+        length: article.length ?? 0,
+      }
+    : null;
+  const sources = extractIndependentSources(
+    html,
+    finalUrl,
+    metadata,
+    parsedArticle,
+  );
+  const normalizedRecipe = extractNormalizedRecipe(sources, {
+    requestedUrl: url,
+    finalUrl,
+    canonicalUrl: metadata.canonicalUrl,
+    language: metadata.language,
+    encoding,
+    contentType,
+  });
+  const reconciledRecipe = reconcileRecipe(normalizedRecipe);
 
   return {
     url,
-    article: article
-      ? {
-          title: article.title ?? null,
-          excerpt: article.excerpt ?? null,
-          contentHtml: article.content ?? '',
-          length: article.length ?? 0,
-        }
-      : null,
-    recipe,
+    finalUrl,
+    rawHtml: html,
+    metadata,
+    article: parsedArticle,
+    recipe: sources.jsonLd[0] ?? null,
+    sources,
+    normalizedRecipe,
+    reconciledRecipe,
   };
 }
 
-function extractRecipeSchema(doc: Document): RecipeSchema | null {
-  const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+async function fetchPageWithRetry(url: string): Promise<{
+  response: Response;
+  buffer: Buffer;
+  contentType: string | null;
+}> {
+  let lastError: unknown;
 
-  for (const script of scripts) {
-    const text = script.textContent?.trim();
+  for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
+    try {
+      return await fetchPageAttempt(url);
+    } catch (error) {
+      lastError = error;
 
-    if (!text) continue;
+      if (attempt === MAX_FETCH_ATTEMPTS || !isRetryableFetchError(error)) {
+        throw error;
+      }
 
-    let json: unknown;
+      await waitBeforeRetry(attempt);
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`Failed to fetch ${url}`);
+}
+
+async function fetchPageAttempt(url: string): Promise<{
+  response: Response;
+  buffer: Buffer;
+  contentType: string | null;
+}> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    let response: Response;
 
     try {
-      json = JSON.parse(text);
-    } catch {
-      continue;
+      response = await fetch(url, {
+        headers: {
+          // Some sites reject requests without a browser-like UA.
+          'User-Agent':
+            'Mozilla/5.0 (compatible; RecipeParser/1.0; +https://example.com)',
+        },
+        signal: controller.signal,
+      });
+    } catch (error) {
+      throw new RetryableFetchError(getErrorMessage(error));
     }
 
-    const recipe = findRecipe(json);
+    if (!response.ok) {
+      const error = new Error(
+        `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+      );
 
-    if (recipe) {
-      return recipe;
+      if (isRetryableStatus(response.status)) {
+        throw new RetryableFetchError(error.message);
+      }
+
+      throw error;
     }
+
+    const contentType = response.headers.get('content-type');
+
+    if (
+      contentType &&
+      !/text\/html|application\/xhtml\+xml/i.test(contentType)
+    ) {
+      throw new Error(`Expected an HTML response, received ${contentType}`);
+    }
+
+    const buffer = await readResponseBuffer(response);
+
+    return {
+      response,
+      buffer,
+      contentType,
+    };
+  } catch (error) {
+    if (error instanceof RetryableFetchError) {
+      throw error;
+    }
+
+    if (isRetryableFetchError(error)) {
+      throw new RetryableFetchError(getErrorMessage(error));
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return null;
 }
 
-function findRecipe(value: unknown): RecipeSchema | null {
+function isRetryableFetchError(error: unknown): boolean {
+  if (error instanceof RetryableFetchError) return true;
+
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function waitBeforeRetry(attempt: number): Promise<void> {
+  const delay = RETRY_DELAY_MS * 2 ** (attempt - 1);
+  await new Promise<void>((resolve) => setTimeout(resolve, delay));
+}
+
+async function readResponseBuffer(response: Response): Promise<Buffer> {
+  if (!response.body) {
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    if (buffer.byteLength > MAX_RESPONSE_BYTES) {
+      throw new Error(`Response exceeds the ${MAX_RESPONSE_BYTES}-byte limit`);
+    }
+
+    return buffer;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      totalBytes += value.byteLength;
+
+      if (totalBytes > MAX_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new Error(
+          `Response exceeds the ${MAX_RESPONSE_BYTES}-byte limit`,
+        );
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
+}
+
+function extractPageMetadata(
+  doc: Document,
+  baseUrl: string,
+  encoding: string,
+  contentType: string | null,
+): PageMetadata {
+  const getMetaContent = (selector: string): string | null =>
+    doc.querySelector(selector)?.getAttribute('content')?.trim() || null;
+
+  const canonical = doc
+    .querySelector('link[rel="canonical"]')
+    ?.getAttribute('href');
+
+  return {
+    contentType,
+    encoding,
+    title:
+      getMetaContent('meta[property="og:title"]') ??
+      doc.querySelector('title')?.textContent?.trim() ??
+      null,
+    description:
+      getMetaContent('meta[name="description"]') ??
+      getMetaContent('meta[property="og:description"]'),
+    canonicalUrl: normalizeMetadataUrl(canonical, baseUrl),
+    language: doc.documentElement.getAttribute('lang')?.trim() || null,
+    openGraphImage: (() => {
+      const image = getMetaContent('meta[property="og:image"]');
+      return normalizeMetadataUrl(image, baseUrl);
+    })(),
+    twitterImage: (() => {
+      const image =
+        getMetaContent('meta[name="twitter:image"]') ??
+        getMetaContent('meta[property="twitter:image"]');
+      return normalizeMetadataUrl(image, baseUrl);
+    })(),
+  };
+}
+
+function normalizeMetadataUrl(
+  value: string | null | undefined,
+  baseUrl: string,
+): string | null {
   if (!value) return null;
 
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const recipe = findRecipe(item);
-
-      if (recipe) return recipe;
-    }
-
+  try {
+    return new URL(value, baseUrl).href;
+  } catch {
     return null;
   }
-
-  if (typeof value !== 'object') {
-    return null;
-  }
-
-  const obj = value as Record<string, unknown>;
-
-  // Direct Recipe object
-  if (isRecipeType(obj['@type'])) {
-    return obj;
-  }
-
-  // JSON-LD graph
-  if (Array.isArray(obj['@graph'])) {
-    const recipe = findRecipe(obj['@graph']);
-
-    if (recipe) return recipe;
-  }
-
-  // Some sites wrap objects differently
-  for (const child of Object.values(obj)) {
-    const recipe = findRecipe(child);
-
-    if (recipe) return recipe;
-  }
-
-  return null;
 }
 
-function isRecipeType(type: unknown): boolean {
-  if (typeof type === 'string') {
-    return type === 'Recipe';
-  }
-
-  if (Array.isArray(type)) {
-    return type.includes('Recipe');
-  }
-
-  return false;
-}

@@ -42,8 +42,8 @@ export function extractHtmlImages(
     const width = parseDimension($(image).attr('width'));
     const height = parseDimension($(image).attr('height'));
     const stepIndex =
-      findStepIndex($, image, stepContainers) ??
-      inferStepIndexFromText(alt, $(image).attr('title'));
+      inferStepIndexFromText(alt, $(image).attr('title')) ??
+      findStepIndex($, image, stepContainers);
     const imageDescription = `${fingerprint} ${alt ?? ''}`;
     let score = 0;
 
@@ -170,11 +170,16 @@ function findStepContainers($: cheerio.CheerioAPI): Element[] {
 
 function findStepIndex($: cheerio.CheerioAPI, image: Element, stepContainers: Element[]): number | undefined {
   const ancestors = $(image).parents().toArray();
-  for (let index = 0; index < stepContainers.length; index++) {
-    const stepContainer = stepContainers[index];
-    if (stepContainer && ancestors.includes(stepContainer)) return index;
-  }
-  return undefined;
+  const matches = stepContainers
+    .map((container, index) => ({
+      container,
+      index,
+      ancestorIndex: ancestors.indexOf(container),
+    }))
+    .filter((match) => match.ancestorIndex >= 0)
+    .sort((a, b) => b.ancestorIndex - a.ancestorIndex);
+
+  return matches[0]?.index;
 }
 
 function inferStepIndexFromText(alt?: string, title?: string): number | undefined {

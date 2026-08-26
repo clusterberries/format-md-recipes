@@ -1,6 +1,15 @@
 import OpenAI from 'openai';
 
-export async function callOpenAI(prompt: string, model: string) {
+export interface OpenAIRequestOptions {
+  systemPrompt?: string;
+  maxCompletionTokens?: number;
+}
+
+export async function callOpenAI(
+  prompt: string,
+  model: string,
+  options: OpenAIRequestOptions = {},
+) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -12,11 +21,14 @@ export async function callOpenAI(prompt: string, model: string) {
   const completion = await client.chat.completions.create({
     model,
     messages: [
-      { role: 'system', content: 'You are a markdown formatter.' },
+      {
+        role: 'system',
+        content: options.systemPrompt ?? 'You are a markdown formatter.',
+      },
       { role: 'user', content: prompt },
     ],
     // temperature: 0.2,
-    max_completion_tokens: 3000,
+    max_completion_tokens: options.maxCompletionTokens ?? 3000,
   });
 
   const content = completion.choices?.[0]?.message?.content ?? '';

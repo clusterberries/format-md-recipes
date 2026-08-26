@@ -11,6 +11,7 @@ export function parseOptions(): CliOptions {
       '-o, --output <file>',
       'output file path; defaults to stdout when omitted',
     )
+    .option('--no-ai', 'disable conditional AI conflict resolution')
     .parse(process.argv);
 
   const options = program.opts();
@@ -18,5 +19,6 @@ export function parseOptions(): CliOptions {
   return {
     inputUrl: options.input,
     output: options.output ? path.resolve(options.output) : null,
+    noAi: options.ai === false,
   };
 }
