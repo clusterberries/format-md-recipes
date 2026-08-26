@@ -18,7 +18,8 @@
     "format": "node ./src/format-md.ts",
     "format-url-content": "node ./src/format-url-content.ts",
     "format-list": "node ./src/format-list.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "tsc-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "@types/jsdom": "^28.0.3",
     "@types/node": "^26.1.0",
     "@types/turndown": "^5.0.6",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
   }
 }
