@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
 const projectRoot = process.cwd();
@@ -20,6 +20,9 @@ const fixtures = [
   'test4-ru',
   'test5-ru',
   'test6-ru',
+  'ingredients-structures',
+  'seo-cleanup',
+  'page-noise',
 ];
 
 const server = createServer((request, response) => {
@@ -51,8 +54,14 @@ function startServer(): Promise<number> {
   });
 }
 
+function normalizeMarkdown(value: string): string {
+  return value.replace(/\r\n/g, '\n').replace(/\n$/, '');
+}
+
 describe('format-url-content integration', () => {
   let port: number;
+  let outputDirectory: string;
+  let outputPath: string;
 
   beforeAll(async () => {
     port = await startServer();
@@ -64,35 +73,58 @@ describe('format-url-content integration', () => {
     });
   });
 
-  it.each(fixtures)(
-    'converts %s into the expected Markdown file',
-    async (fixture) => {
-      const outputDirectory = await mkdtemp(
-        path.join(tmpdir(), 'format-url-content-'),
-      );
-      const outputPath = path.join(outputDirectory, 'result.md');
-      const fixtureUrl = `http://127.0.0.1:${port}/${fixture}.html`;
-      const expectedPath = path.join(fixturesDirectory, `${fixture}.md`);
+  beforeEach(async () => {
+    outputDirectory = await mkdtemp(path.join(tmpdir(), 'format-url-content-'));
+    outputPath = path.join(outputDirectory, 'result.md');
+  });
 
-      try {
-        await execFileAsync(
-          process.execPath,
-          [cliPath, '-i', fixtureUrl, '--no-ai', '-o', outputPath],
-          { cwd: projectRoot },
+  afterEach(async () => {
+    await rm(outputDirectory, { recursive: true, force: true });
+  });
+
+  async function runAndCompare(
+    fixture: string,
+    expectedPath: string,
+    extraArgs: string[] = [],
+  ): Promise<void> {
+    const fixtureUrl = `http://127.0.0.1:${port}/${fixture}.html`;
+
+    await execFileAsync(
+      process.execPath,
+      [cliPath, '-i', fixtureUrl, '--no-ai', ...extraArgs, '-o', outputPath],
+      { cwd: projectRoot },
+    );
+
+    const [actual, expected] = await Promise.all([
+      readFile(outputPath, 'utf8'),
+      readFile(expectedPath, 'utf8'),
+    ]);
+
+    expect(normalizeMarkdown(actual)).toBe(normalizeMarkdown(expected));
+  }
+
+  describe('default image mode', () => {
+    it.each(fixtures)(
+      'converts %s into the expected Markdown file',
+      async (fixture) => {
+        const expectedPath = path.join(fixturesDirectory, `${fixture}.md`);
+        await runAndCompare(fixture, expectedPath);
+      },
+    );
+  });
+
+  describe('--main-image-only', () => {
+    const mainImageOnlyFixtures = ['test1-ru', 'test6-ru'];
+
+    it.each(mainImageOnlyFixtures)(
+      'converts %s into the expected Markdown file with --main-image-only',
+      async (fixture) => {
+        const expectedPath = path.join(
+          fixturesDirectory,
+          `${fixture}.main-image-only.md`,
         );
-
-        const [actual, expected] = await Promise.all([
-          readFile(outputPath, 'utf8'),
-          readFile(expectedPath, 'utf8'),
-        ]);
-
-        const normalizeMarkdown = (value: string) =>
-          value.replace(/\r\n/g, '\n').replace(/\n$/, '');
-
-        expect(normalizeMarkdown(actual)).toBe(normalizeMarkdown(expected));
-      } finally {
-        await rm(outputDirectory, { recursive: true, force: true });
-      }
-    },
-  );
+        await runAndCompare(fixture, expectedPath, ['--main-image-only']);
+      },
+    );
+  });
 });

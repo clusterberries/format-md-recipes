@@ -6,12 +6,19 @@ export function parseOptions(): CliOptions {
   program
     .name('format-url-content')
     .description('Fetch URL content and parse it using OpenAI')
-    .requiredOption('-i, --input <url>', 'url to download and parse content from')
+    .requiredOption(
+      '-i, --input <url>',
+      'url to download and parse content from',
+    )
     .option(
       '-o, --output <file>',
       'output file path; defaults to stdout when omitted',
     )
     .option('--no-ai', 'disable conditional AI conflict resolution')
+    .option(
+      '--main-image-only',
+      'include only the main image (skip step images); main image is placed at the bottom',
+    )
     .parse(process.argv);
 
   const options = program.opts();
@@ -20,5 +27,6 @@ export function parseOptions(): CliOptions {
     inputUrl: options.input,
     output: options.output ? path.resolve(options.output) : null,
     noAi: options.ai === false,
+    mainImageOnly: Boolean(options.mainImageOnly),
   };
 }

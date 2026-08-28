@@ -7,6 +7,7 @@ export interface CliOptions {
   inputUrl: string;
   output: string | null;
   noAi: boolean;
+  mainImageOnly: boolean;
 }
 
 export interface ParsedArticle {
@@ -49,8 +50,13 @@ export interface RecipeContentCandidate {
   source: RecipeSource;
   location: string;
   title: string | null;
+  description?: string | null;
   ingredients: string[];
   instructions: string[];
+  servings?: string | null;
+  prepTime?: string | null;
+  cookTime?: string | null;
+  totalTime?: string | null;
 }
 
 export type RecipeCandidateSource =

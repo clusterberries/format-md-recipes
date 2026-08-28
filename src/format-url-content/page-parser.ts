@@ -5,6 +5,7 @@ import sniffHTMLEncoding from 'html-encoding-sniffer';
 import { extractIndependentSources } from './source-extractor.ts';
 import { extractNormalizedRecipe } from './field-extractor.ts';
 import { reconcileRecipe } from './reconciler.ts';
+import { logInfo, logWarning } from '../shared/utils.ts';
 import type { PageMetadata, ParsedRecipePage } from './types.ts';
 
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -15,7 +16,12 @@ const RETRY_DELAY_MS = 250;
 class RetryableFetchError extends Error {}
 
 export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
+  logInfo(`Fetching page: ${url}`);
   const { response, buffer, contentType } = await fetchPageWithRetry(url);
+  logInfo(
+    `Page fetched (${buffer.byteLength} bytes, content-type: ${contentType ?? 'unknown'})`,
+  );
+
   const encoding = sniffHTMLEncoding(buffer, {
     transportLayerEncodingLabel: contentType ?? undefined,
     defaultEncoding: 'windows-1252',
@@ -30,6 +36,9 @@ export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
     finalUrl,
     encoding,
     contentType,
+  );
+  logInfo(
+    `Detected encoding: ${encoding}, language: ${metadata.language ?? 'unknown'}`,
   );
 
   // Extract main article
@@ -48,6 +57,12 @@ export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
     metadata,
     parsedArticle,
   );
+  logInfo(
+    `Extracted ${sources.candidates.length} recipe candidate(s) ` +
+      `(json-ld: ${sources.jsonLd.length}, main image: ${
+        sources.images.mainImage ? 'yes' : 'no'
+      }, step images: ${sources.images.stepImages.length})`,
+  );
   const normalizedRecipe = extractNormalizedRecipe(sources, {
     requestedUrl: url,
     finalUrl,
@@ -57,6 +72,11 @@ export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
     contentType,
   });
   const reconciledRecipe = reconcileRecipe(normalizedRecipe);
+  logInfo(
+    `Reconciled recipe: ${reconciledRecipe.ingredients.value.length} ingredient(s), ` +
+      `${reconciledRecipe.instructions.value.length} instruction(s), ` +
+      `${reconciledRecipe.conflicts.length} conflict(s) detected`,
+  );
 
   return {
     url,
@@ -88,6 +108,9 @@ async function fetchPageWithRetry(url: string): Promise<{
         throw error;
       }
 
+      logWarning(
+        `Fetch attempt ${attempt}/${MAX_FETCH_ATTEMPTS} failed for ${url}: ${getErrorMessage(error)}. Retrying...`,
+      );
       await waitBeforeRetry(attempt);
     }
   }
@@ -231,6 +254,13 @@ function extractPageMetadata(
   const getMetaContent = (selector: string): string | null =>
     doc.querySelector(selector)?.getAttribute('content')?.trim() || null;
 
+  const language =
+    doc.documentElement.getAttribute('lang')?.trim() ||
+    getMetaContent('meta[http-equiv="content-language"]') ||
+    getMetaContent('meta[property="og:locale"]') ||
+    getMetaContent('meta[name="language"]') ||
+    null;
+
   const canonical = doc
     .querySelector('link[rel="canonical"]')
     ?.getAttribute('href');
@@ -246,7 +276,7 @@ function extractPageMetadata(
       getMetaContent('meta[name="description"]') ??
       getMetaContent('meta[property="og:description"]'),
     canonicalUrl: normalizeMetadataUrl(canonical, baseUrl),
-    language: doc.documentElement.getAttribute('lang')?.trim() || null,
+    language,
     openGraphImage: (() => {
       const image = getMetaContent('meta[property="og:image"]');
       return normalizeMetadataUrl(image, baseUrl);

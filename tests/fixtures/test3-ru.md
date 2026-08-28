@@ -1,12 +1,15 @@
 # Щи с курицей, капустой и помидорами
 
+![Изображение рецепта](https://recipe-source.example/wp-content/uploads/2020/09/12-1-912x1300.jpg)
+
 Блюдо прекрасно разнообразит обеденное меню
 
 ## Metadata
 
-- Servings: 6
-- Preparation time: PT40M
-- Cooking time: PT40M
+- Порции: 6
+- Время подготовки: PT40M
+- Время приготовления: PT40M
+- Общее время: PT1H20M
 
 ## Ingredients
 - куриное филе: 300 гр
@@ -55,8 +58,3 @@
 11. Всем приятного аппетита!
 
    ![Фото рецепта - Щи с курицей, капустой и помидорами - шаг 11](https://recipe-source.example/wp-content/uploads/2020/09/11-2-1024x652.jpg)
-12. Шаг 1
-
-   ![Фото рецепта - Щи с курицей, капустой и помидорами - шаг 1](https://recipe-source.example/wp-content/uploads/2020/09/1-61-1024x652.jpg)
-
-![Recipe image](https://recipe-source.example/wp-content/uploads/2020/09/12-1-912x1300.jpg)

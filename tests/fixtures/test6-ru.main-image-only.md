@@ -1,7 +1,5 @@
 # Куриные бедра в сметанно-чесночном соусе с брокколи в духовке
 
-![Изображение рецепта](https://example.test/media/recipe-main.webp)
-
 ## Metadata
 
 - Порции: 2
@@ -15,20 +13,10 @@
 
 ## Instructions
 1. Бедра тщательно промыть, кожицу убрать (по желанию).
-
-   ![Шаг 1](https://example.test/media/recipe-step.jpg)
 2. Чеснок измельчить в чесноколавке.
-
-   ![Шаг 2](https://example.test/media/recipe-step.jpg)
 3. К бедрам добавить сметану, чеснок, соль, перец (приправу для курицы) и тщательно перемешать.
-
-   ![Шаг 3](https://example.test/media/recipe-step.jpg)
 4. Выложить бедра и брокколи на противень и поместить в предварительно разогретую до 200 градусов духовку, запекать до появления легкой золотистой корочки.
-
-   ![Шаг 4](https://example.test/media/recipe-step.jpg)
 5. Подавать можно со спагетти либо картофелем.
-
-   ![Шаг 5](https://example.test/media/recipe-step.jpg)
 6. Приятного аппетита!
 
-   ![Шаг 6](https://example.test/media/recipe-step.jpg)
+![Изображение рецепта](https://example.test/media/recipe-main.webp)

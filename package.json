@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
+    "@rolldown/binding-wasm32-wasi": "^1.2.6",
     "@truto/turndown-plugin-gfm": "^1.0.3",
     "cheerio": "^1.2.0",
     "commander": "^11.0.0",

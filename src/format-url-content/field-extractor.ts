@@ -27,36 +27,68 @@ export function extractNormalizedRecipe(
 ): NormalizedRecipe {
   const title = [
     ...sources.jsonLd.flatMap((recipe, index) =>
-      fieldFromValue<string>(recipe.name, 'json-ld', `json-ld-${index}.name`),
+      fieldFromValue<string>(
+        cleanRecipeTitle(typeof recipe.name === 'string' ? recipe.name : null),
+        'json-ld',
+        `json-ld-${index}.name`,
+      ),
     ),
     ...sources.microdata.flatMap((candidate) =>
-      fieldFromValue<string>(candidate.title, 'microdata', candidate.location),
+      fieldFromValue<string>(
+        cleanRecipeTitle(candidate.title),
+        'microdata',
+        candidate.location,
+      ),
     ),
     ...sources.recipeHtml.flatMap((candidate) =>
-      fieldFromValue<string>(candidate.title, 'html', candidate.location),
+      fieldFromValue<string>(
+        cleanRecipeTitle(candidate.title),
+        'html',
+        candidate.location,
+      ),
     ),
     ...fieldFromValue<string>(
-      sources.readability?.title,
+      cleanRecipeTitle(sources.readability?.title),
       'readability',
       'readability.title',
     ),
-    ...fieldFromValue<string>(sources.metadata.title, 'metadata', 'metadata.title'),
+    ...fieldFromValue<string>(
+      cleanRecipeTitle(sources.metadata.title),
+      'metadata',
+      'metadata.title',
+    ),
   ];
   const description = [
     ...sources.jsonLd.flatMap((recipe, index) =>
       fieldFromValue<string>(
-        recipe.description,
+        cleanRecipeDescription(
+          typeof recipe.description === 'string' ? recipe.description : null,
+        ),
         'json-ld',
         `json-ld-${index}.description`,
       ),
     ),
+    ...sources.microdata.flatMap((candidate) =>
+      fieldFromValue<string>(
+        cleanRecipeDescription(candidate.description),
+        'microdata',
+        `${candidate.location}.description`,
+      ),
+    ),
+    ...sources.recipeHtml.flatMap((candidate) =>
+      fieldFromValue<string>(
+        cleanRecipeDescription(candidate.description),
+        'html',
+        `${candidate.location}.description`,
+      ),
+    ),
     ...fieldFromValue<string>(
-      sources.metadata.description,
+      cleanRecipeDescription(sources.metadata.description),
       'metadata',
       'metadata.description',
     ),
     ...fieldFromValue<string>(
-      sources.readability?.excerpt,
+      cleanRecipeDescription(sources.readability?.excerpt),
       'readability',
       'readability.excerpt',
     ),
@@ -65,10 +97,26 @@ export function extractNormalizedRecipe(
   const normalized: NormalizedRecipe = {
     title,
     description,
-    servings: extractSchemaField(sources.jsonLd, 'recipeYield', 'servings'),
-    prepTime: extractSchemaField(sources.jsonLd, 'prepTime', 'prepTime'),
-    cookTime: extractSchemaField(sources.jsonLd, 'cookTime', 'cookTime'),
-    totalTime: extractSchemaField(sources.jsonLd, 'totalTime', 'totalTime'),
+    servings: [
+      ...extractSchemaField(sources.jsonLd, 'recipeYield', 'servings'),
+      ...extractCandidateMetaFields(sources.microdata, 'servings'),
+      ...extractCandidateMetaFields(sources.recipeHtml, 'servings'),
+    ],
+    prepTime: [
+      ...extractSchemaField(sources.jsonLd, 'prepTime', 'prepTime'),
+      ...extractCandidateMetaFields(sources.microdata, 'prepTime'),
+      ...extractCandidateMetaFields(sources.recipeHtml, 'prepTime'),
+    ],
+    cookTime: [
+      ...extractSchemaField(sources.jsonLd, 'cookTime', 'cookTime'),
+      ...extractCandidateMetaFields(sources.microdata, 'cookTime'),
+      ...extractCandidateMetaFields(sources.recipeHtml, 'cookTime'),
+    ],
+    totalTime: [
+      ...extractSchemaField(sources.jsonLd, 'totalTime', 'totalTime'),
+      ...extractCandidateMetaFields(sources.microdata, 'totalTime'),
+      ...extractCandidateMetaFields(sources.recipeHtml, 'totalTime'),
+    ],
     ingredients: extractIngredients(sources),
     instructions: extractInstructions(sources),
     mainImage: null,
@@ -92,32 +140,54 @@ export function extractNormalizedRecipe(
   return normalized;
 }
 
-function extractIngredients(sources: ExtractedPageSources): ExtractedIngredient[] {
+function extractIngredients(
+  sources: ExtractedPageSources,
+): ExtractedIngredient[] {
   const ingredients: ExtractedIngredient[] = [];
 
   sources.jsonLd.forEach((recipe, recipeIndex) => {
     toStrings(recipe.recipeIngredient).forEach((text, index) => {
       if (!isLikelyIngredientText(text)) return;
-      ingredients.push(createIngredient(text, 'json-ld', `json-ld-${recipeIndex}.recipeIngredient[${index}]`));
+      ingredients.push(
+        createIngredient(
+          text,
+          'json-ld',
+          `json-ld-${recipeIndex}.recipeIngredient[${index}]`,
+        ),
+      );
     });
   });
 
   sources.microdata.forEach((candidate) => {
     candidate.ingredients.forEach((text, index) => {
       if (!isLikelyIngredientText(text)) return;
-      ingredients.push(createIngredient(text, 'microdata', `${candidate.location}.ingredients[${index}]`));
+      ingredients.push(
+        createIngredient(
+          text,
+          'microdata',
+          `${candidate.location}.ingredients[${index}]`,
+        ),
+      );
     });
   });
 
   sources.recipeHtml.forEach((candidate) => {
     candidate.ingredients.forEach((text, index) => {
       if (!isLikelyIngredientText(text)) return;
-      ingredients.push(createIngredient(text, 'html', `${candidate.location}.ingredients[${index}]`));
+      ingredients.push(
+        createIngredient(
+          text,
+          'html',
+          `${candidate.location}.ingredients[${index}]`,
+        ),
+      );
     });
   });
 
   sources.forms
-    .filter((value) => /ingredient|ингредиент/i.test(`${value.label ?? ''} ${value.name ?? ''}`))
+    .filter((value) =>
+      /ingredient|ингредиент/i.test(`${value.label ?? ''} ${value.name ?? ''}`),
+    )
     .forEach((value) => {
       if (!isLikelyIngredientText(value.value)) return;
       ingredients.push(createIngredient(value.value, 'form', value.location));
@@ -126,22 +196,40 @@ function extractIngredients(sources: ExtractedPageSources): ExtractedIngredient[
   return deduplicateIngredients(ingredients);
 }
 
-function extractInstructions(sources: ExtractedPageSources): ExtractedInstruction[] {
+function extractInstructions(
+  sources: ExtractedPageSources,
+): ExtractedInstruction[] {
   const instructions: ExtractedInstruction[] = [];
 
   sources.jsonLd.forEach((recipe, recipeIndex) => {
     flattenInstructions(recipe.recipeInstructions).forEach((text, index) => {
-      instructions.push(createInstruction(text, index, 'json-ld', `json-ld-${recipeIndex}.recipeInstructions[${index}]`));
+      if (!isLikelyInstructionText(text)) return;
+      instructions.push(
+        createInstruction(
+          text,
+          index,
+          'json-ld',
+          `json-ld-${recipeIndex}.recipeInstructions[${index}]`,
+        ),
+      );
     });
   });
 
   [...sources.microdata, ...sources.recipeHtml].forEach((candidate) => {
-      candidate.instructions.forEach((text, index) => {
-      instructions.push(createInstruction(text, index, candidate.source, `${candidate.location}.instructions[${index}]`));
+    candidate.instructions.forEach((text, index) => {
+      if (!isLikelyInstructionText(text)) return;
+      instructions.push(
+        createInstruction(
+          text,
+          index,
+          candidate.source,
+          `${candidate.location}.instructions[${index}]`,
+        ),
+      );
     });
   });
 
-  return instructions.filter((instruction) => instruction.text.length > 0);
+  return deduplicateInstructions(instructions);
 }
 
 function extractSchemaField(
@@ -150,7 +238,11 @@ function extractSchemaField(
   fieldName: string,
 ): ExtractedField<string>[] {
   return recipes.flatMap((recipe, index) =>
-     fieldFromValue<string>(recipe[property], 'json-ld', `json-ld-${index}.${fieldName}`),
+    fieldFromValue<string>(
+      recipe[property],
+      'json-ld',
+      `json-ld-${index}.${fieldName}`,
+    ),
   );
 }
 
@@ -162,13 +254,15 @@ function fieldFromValue<T>(
   if (typeof value !== 'string' && typeof value !== 'number') return [];
   const normalized = String(value).trim();
   if (!normalized) return [];
-  return [{
-    value: normalized as T,
-    source,
-    confidence: SOURCE_CONFIDENCE[source],
-    location,
-    originalValue: value,
-  }];
+  return [
+    {
+      value: normalized as T,
+      source,
+      confidence: SOURCE_CONFIDENCE[source],
+      location,
+      originalValue: value,
+    },
+  ];
 }
 
 function createIngredient(
@@ -244,7 +338,24 @@ function parseIngredient(
 function isLikelyIngredientText(value: string): boolean {
   const text = value.replace(/\s+/g, ' ').trim();
   if (!text || text.length < 2) return false;
+  if (text.length > 200) return false;
+  if (/^порци(?:и|я|й)/i.test(text)) return false;
+  if (
+    /^(?:гр|г|кг|шт|мл|л|с\.?л\.|ч\.?л\.|порци(?:и|я)|добавить|вкус|шаг|step|назад|далее)$/i.test(
+      text,
+    )
+  )
+    return false;
   if (/(?:kcal|kkal|ккал|калори(?:я|и|й))/i.test(text)) return false;
+  if (
+    /^(?:не выключать экран|выключать экран|подписаться|реклама|ждать|обновить|просто)$/i.test(
+      text,
+    )
+  )
+    return false;
+  if (/^\(.*\)$/i.test(text)) return false;
+  if (/\b(?:гр|г|кг|шт|мл|л)\b/i.test(text) && text.split(/\s+/).length <= 2)
+    return false;
   if (
     /\b(?:prep|cook|total)\s*time\b|время\s+(?:приготовления|подготовки)/i.test(
       text,
@@ -347,10 +458,102 @@ function deduplicateIngredients(
   });
 }
 
+function deduplicateInstructions(
+  instructions: ExtractedInstruction[],
+): ExtractedInstruction[] {
+  const seen = new Set<string>();
+  return instructions.filter((instruction) => {
+    const text = normalizeInstructionText(instruction.text);
+    if (!text || !isLikelyInstructionText(text)) return false;
+    const key = text.replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function canonicalIngredientKey(value: string): string {
   return value
     .replace(/\s*[:\-–—]\s*/g, ' ')
+    .replace(/\s*\([^)]*\)/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLocaleLowerCase();
+}
+
+function cleanRecipeTitle(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const cleaned = value
+    .replace(/\s+(?:от|by)\s+.+$/i, '')
+    .replace(
+      /\s*[-–—]\s*(?:.*(?:сайт|site)|рецепт(?:\s+с\s+фото)?(?:\s+пошагово)?|recipe(?:\s+with\s+photo)?(?:\s+step\s+by\s+step)?)\s*$/i,
+      '',
+    )
+    .trim();
+  return cleaned || null;
+}
+
+function cleanRecipeDescription(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  const text = value.replace(/\s+/g, ' ').trim();
+  if (/^(?:как приготовить(?: блюдо)?|рецепт\s+|recipe\s+)/i.test(text)) {
+    const withoutLead = text
+      .replace(/^(?:как приготовить блюдо\s+|рецепт\s+|recipe\s+)/i, '')
+      .trim();
+    if (!withoutLead) return null;
+    if (/(?:пошагово|step[- ]?by[- ]?step|с фото|with photo)/i.test(text)) {
+      return null;
+    }
+    return withoutLead;
+  }
+
+  if (
+    /(?:пошаговый рецепт|поиск по ингредиентам|пошагово.*с фото)/i.test(text)
+  ) {
+    return null;
+  }
+
+  const cleaned = text
+    .replace(
+      /\s+(?:от автора|от\s+автора)\s+.*?(?:на сайте|on the site).*$/i,
+      '',
+    )
+    .replace(/\s+\(.*?\)\s*$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || null;
+}
+
+function extractCandidateMetaFields(
+  candidates: Array<{
+    source: FieldSource;
+    location: string;
+    servings?: string | null;
+    prepTime?: string | null;
+    cookTime?: string | null;
+    totalTime?: string | null;
+  }>,
+  property: 'servings' | 'prepTime' | 'cookTime' | 'totalTime',
+): ExtractedField<string>[] {
+  return candidates.flatMap((candidate) => {
+    const value = candidate[property];
+    if (typeof value !== 'string' || !value.trim()) return [];
+    return fieldFromValue<string>(
+      value,
+      candidate.source,
+      `${candidate.location}.${property}`,
+    );
+  });
+}
+
+function isLikelyInstructionText(value: string): boolean {
+  const text = normalizeInstructionText(value);
+  if (!text || text.length < 2) return false;
+  if (/^(?:шаг|step)\s*\d+$/i.test(text)) return false;
+  if (/^\d+(?:[.,]\d+)?$/.test(text)) return false;
+  if (/^(?:шаг|step)\s*\d+\s*[:.-]?\s*$/i.test(text)) return false;
+  if (/^[\d\s\p{P}\p{S}]+$/u.test(text)) return false;
+  return true;
 }

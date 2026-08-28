@@ -1,13 +1,15 @@
 # Кексы с арахисовой пастой
 
+![Изображение рецепта](https://images.recipe-source.example/2018/upl/recipes/zen/u-2dcc33e8bb3f6e824ba8acdd971f8d86.jpg)
+
 Проверенный рецепт приготовления кексов с арахисовой пастой, шаг за шагом с фотографиями.
 
 ## Metadata
 
-- Servings: 2
-- Preparation time: PT10M
-- Cooking time: PT25M
-- Total time: PT35M
+- Порции: 2
+- Время подготовки: PT10M
+- Время приготовления: PT25M
+- Общее время: PT35M
 
 ## Ingredients
 - Мука пшеничная - 170 г
@@ -34,5 +36,3 @@
 10. Кексы с арахисовой пастой и шоколадными каплями готовы.
 11. Вынуть их из формы и полностью остудить на решетке.
 12. Приятного кофепития!
-
-![Recipe image](https://images.recipe-source.example/2018/upl/recipes/zen/u-2dcc33e8bb3f6e824ba8acdd971f8d86.jpg)

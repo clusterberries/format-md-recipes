@@ -1,6 +1,6 @@
 import { writeFile } from '../shared/file-utils.ts';
 import type { CliOptions } from './types.ts';
-import { logWarning } from '../shared/utils.ts';
+import { logInfo, logSuccess, logWarning } from '../shared/utils.ts';
 import { parseRecipePage } from './page-parser.ts';
 import { cleanRecipeContent } from './html-cleaner/index.ts';
 import { renderRecipeMarkdown } from './recipe-markdown-renderer.ts';
@@ -11,6 +11,12 @@ export async function runUrlContentFormatter(options: CliOptions) {
 
   try {
     const content = await parseRecipePage(inputUrl);
+
+    if (options.noAi) {
+      logInfo(
+        'AI conflict resolution disabled (--no-ai). Using deterministic result.',
+      );
+    }
     const aiResult = options.noAi
       ? {
           recipe: content.reconciledRecipe,
@@ -25,6 +31,8 @@ export async function runUrlContentFormatter(options: CliOptions) {
 
     if (content) {
       const originalContentHtml = content.article?.contentHtml?.trim() ?? '';
+      // TODO: contentHtml is only used for the empty-content check below; the
+      // final markdown is built from aiResult.recipe, not this cleaned HTML.
       const contentHtml = cleanRecipeContent(
         originalContentHtml,
         'recipe-only',
@@ -41,8 +49,14 @@ export async function runUrlContentFormatter(options: CliOptions) {
 
       const images = content.sources.images;
 
+      logInfo(
+        options.mainImageOnly
+          ? 'Image mode: main image only (step images skipped, main image at bottom).'
+          : 'Image mode: all images (main image after title, step images inline).',
+      );
       const markdown = renderRecipeMarkdown(aiResult.recipe, {
-        imagePosition: 'bottom',
+        imagePosition: options.mainImageOnly ? 'bottom' : 'top',
+        includeStepImages: !options.mainImageOnly,
       });
 
       if (output) {
@@ -50,10 +64,10 @@ export async function runUrlContentFormatter(options: CliOptions) {
           logWarning(`Content is empty for ${inputUrl}.`);
         } else {
           await writeFile(output, markdown);
-          console.log(`✅ Saved to ${output}`);
+          logSuccess(`Saved to ${output}`);
         }
       } else {
-        console.log('✅ Output sent to stdout.');
+        logSuccess('Output sent to stdout.');
         console.log(
           JSON.stringify(
             {

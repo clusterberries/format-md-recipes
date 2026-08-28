@@ -180,6 +180,7 @@ function mergeCompatibleIngredients(
 ): ExtractedIngredient[] {
   const result = [...selected];
   all.forEach((ingredient) => {
+    if (isAggregateIngredient(ingredient, selected)) return;
     const existing = result.find((item) => sameIngredientName(item, ingredient));
     if (!existing && ingredient.source !== selected[0]?.source) result.push(ingredient);
     else if (existing && isRicherIngredient(ingredient, existing)) {
@@ -187,6 +188,15 @@ function mergeCompatibleIngredients(
     }
   });
   return result;
+}
+
+function isAggregateIngredient(
+  ingredient: ExtractedIngredient,
+  selected: ExtractedIngredient[],
+): boolean {
+  if (selected.length < 3 || ingredient.source === selected[0]?.source) return false;
+  const text = normalizeIngredient(ingredient.text);
+  return selected.every((item) => text.includes(normalizeIngredient(item.text)));
 }
 
 function sameIngredientName(a: ExtractedIngredient, b: ExtractedIngredient): boolean {
