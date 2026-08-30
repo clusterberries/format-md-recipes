@@ -78,7 +78,7 @@ function formatMetadataLine(label: string, value: string | null): string {
   return value ? `- ${label}: ${escapeListText(value)}` : '';
 }
 
-function getLanguage(language: string | null): 'ru' | 'en' {
+export function getLanguage(language: string | null): 'ru' | 'en' {
   return language?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
 }
 
@@ -147,7 +147,7 @@ function renderInstructions(
   return lines.join('\n');
 }
 
-function renderImage(
+export function renderImage(
   image: ExtractedImage,
   fallbackAlt: string,
   language: 'ru' | 'en' = 'en',

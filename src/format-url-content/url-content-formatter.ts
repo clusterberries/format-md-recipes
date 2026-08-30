@@ -1,9 +1,14 @@
 import { writeFile } from '../shared/file-utils.ts';
-import type { CliOptions } from './types.ts';
+import type { CliOptions, ReconciledRecipe } from './types.ts';
 import { logInfo, logSuccess, logWarning } from '../shared/utils.ts';
 import { parseRecipePage } from './page-parser.ts';
 import { cleanRecipeContent } from './html-cleaner/index.ts';
-import { renderRecipeMarkdown } from './recipe-markdown-renderer.ts';
+import { convertRecipeHtmlToMarkdown } from './markdown-converter.ts';
+import {
+  getLanguage,
+  renderImage,
+  renderRecipeMarkdown,
+} from './recipe-markdown-renderer.ts';
 import { resolveRecipeConflicts } from './ai-conflict-resolver.ts';
 
 export async function runUrlContentFormatter(options: CliOptions) {
@@ -31,33 +36,40 @@ export async function runUrlContentFormatter(options: CliOptions) {
 
     if (content) {
       const originalContentHtml = content.article?.contentHtml?.trim() ?? '';
-      // TODO: contentHtml is only used for the empty-content check below; the
-      // final markdown is built from aiResult.recipe, not this cleaned HTML.
-      const contentHtml = cleanRecipeContent(
-        originalContentHtml,
-        'recipe-only',
-      )?.trim();
-
-      const hasRecipeSchema =
-        content.recipe && Object.keys(content.recipe).length > 0;
-      const hasRecipeCandidate = content.sources.candidates.length > 0;
-
-      if (!contentHtml && !hasRecipeSchema && !hasRecipeCandidate) {
-        logWarning(`No content or recipe schema found for ${inputUrl}.`);
-        return;
-      }
+      const recipeIdentified =
+        aiResult.recipe.ingredients.value.length > 0 &&
+        aiResult.recipe.instructions.value.length > 0;
 
       const images = content.sources.images;
+      const imagePosition = options.mainImageOnly ? 'bottom' : 'top';
 
-      logInfo(
-        options.mainImageOnly
-          ? 'Image mode: main image only (step images skipped, main image at bottom).'
-          : 'Image mode: all images (main image after title, step images inline).',
-      );
-      const markdown = renderRecipeMarkdown(aiResult.recipe, {
-        imagePosition: options.mainImageOnly ? 'bottom' : 'top',
-        includeStepImages: !options.mainImageOnly,
-      });
+      let markdown: string;
+      if (recipeIdentified) {
+        logInfo(
+          options.mainImageOnly
+            ? 'Image mode: main image only (step images skipped, main image at bottom).'
+            : 'Image mode: all images (main image after title, step images inline).',
+        );
+        markdown = renderRecipeMarkdown(aiResult.recipe, {
+          imagePosition,
+          includeStepImages: !options.mainImageOnly,
+        });
+      } else {
+        logInfo(
+          'Could not identify recipe (missing ingredients/instructions). Falling back to cleaned page content.',
+        );
+        markdown = buildFallbackMarkdown(
+          originalContentHtml,
+          aiResult.recipe,
+          content.article?.title ?? null,
+          imagePosition,
+        );
+
+        if (!markdown) {
+          logWarning(`No content or recipe found for ${inputUrl}.`);
+          return;
+        }
+      }
 
       if (output) {
         if (!markdown) {
@@ -79,6 +91,7 @@ export async function runUrlContentFormatter(options: CliOptions) {
               normalizedRecipe: content.normalizedRecipe,
               reconciledRecipe: aiResult.recipe,
               ai: aiResult,
+              fallback: !recipeIdentified,
               content: markdown ? `${markdown?.slice(0, 100)}...` : null, // Log the first 100 characters of the content
             },
             null,
@@ -90,4 +103,39 @@ export async function runUrlContentFormatter(options: CliOptions) {
   } catch (error: any) {
     throw new Error(`Error formatting ${inputUrl}: ${error.message}`);
   }
+}
+
+function buildFallbackMarkdown(
+  originalContentHtml: string,
+  recipe: ReconciledRecipe,
+  articleTitle: string | null,
+  imagePosition: 'top' | 'bottom',
+): string {
+  const cleanedHtml = cleanRecipeContent(
+    originalContentHtml,
+    'minimal',
+  )?.trim();
+  const title = articleTitle?.trim() || recipe.title.value || '';
+
+  if (!cleanedHtml && !title && !recipe.mainImage) {
+    return '';
+  }
+
+  const language = getLanguage(recipe.sourceMetadata.language);
+  const mainImage = recipe.mainImage
+    ? renderImage(
+        recipe.mainImage,
+        language === 'ru' ? 'Изображение рецепта' : 'Recipe image',
+        language,
+      )
+    : '';
+  const body = cleanedHtml ? convertRecipeHtmlToMarkdown(cleanedHtml) : '';
+
+  const sections: string[] = [];
+  if (title) sections.push(`# ${title}`);
+  if (imagePosition === 'top' && mainImage) sections.push(mainImage);
+  if (body) sections.push(body);
+  if (imagePosition === 'bottom' && mainImage) sections.push(mainImage);
+
+  return sections.filter(Boolean).join('\n\n').trim();
 }

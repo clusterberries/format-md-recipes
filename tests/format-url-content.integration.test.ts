@@ -23,6 +23,7 @@ const fixtures = [
   'ingredients-structures',
   'seo-cleanup',
   'page-noise',
+  'no-recipe-article',
 ];
 
 const server = createServer((request, response) => {
