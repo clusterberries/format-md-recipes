@@ -101,7 +101,9 @@ export async function runUrlContentFormatter(options: CliOptions) {
       }
     }
   } catch (error: any) {
-    throw new Error(`Error formatting ${inputUrl}: ${error.message}`);
+    throw new Error(`Error formatting ${inputUrl}: ${error.message}`, {
+      cause: error,
+    });
   }
 }
 

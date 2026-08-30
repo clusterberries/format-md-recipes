@@ -1,6 +1,5 @@
 import type {
   ExtractedField,
-  ExtractedImage,
   ExtractedIngredient,
   ExtractedInstruction,
   CollectionConflict,
@@ -151,20 +150,20 @@ function compareFields<T>(a: ExtractedField<T>, b: ExtractedField<T>): number {
   );
 }
 
-function compareCollections<T extends { source: ExtractedField<unknown>['source']; confidence: number }>(
-  a: T[],
-  b: T[],
-): number {
+function compareCollections<
+  T extends { source: ExtractedField<unknown>['source']; confidence: number },
+>(a: T[], b: T[]): number {
   return (
     b.length - a.length ||
-    SOURCE_PRIORITY[b[0]?.source ?? 'metadata'] - SOURCE_PRIORITY[a[0]?.source ?? 'metadata'] ||
+    SOURCE_PRIORITY[b[0]?.source ?? 'metadata'] -
+      SOURCE_PRIORITY[a[0]?.source ?? 'metadata'] ||
     averageConfidence(b) - averageConfidence(a)
   );
 }
 
-function groupBySource<T extends { source: ExtractedField<unknown>['source']; confidence: number }>(
-  values: T[],
-): Map<T['source'], T[]> {
+function groupBySource<
+  T extends { source: ExtractedField<unknown>['source']; confidence: number },
+>(values: T[]): Map<T['source'], T[]> {
   const groups = new Map<T['source'], T[]>();
   values.forEach((value) => {
     const group = groups.get(value.source) ?? [];
@@ -181,8 +180,11 @@ function mergeCompatibleIngredients(
   const result = [...selected];
   all.forEach((ingredient) => {
     if (isAggregateIngredient(ingredient, selected)) return;
-    const existing = result.find((item) => sameIngredientName(item, ingredient));
-    if (!existing && ingredient.source !== selected[0]?.source) result.push(ingredient);
+    const existing = result.find((item) =>
+      sameIngredientName(item, ingredient),
+    );
+    if (!existing && ingredient.source !== selected[0]?.source)
+      result.push(ingredient);
     else if (existing && isRicherIngredient(ingredient, existing)) {
       result[result.indexOf(existing)] = ingredient;
     }
@@ -194,25 +196,52 @@ function isAggregateIngredient(
   ingredient: ExtractedIngredient,
   selected: ExtractedIngredient[],
 ): boolean {
-  if (selected.length < 3 || ingredient.source === selected[0]?.source) return false;
+  if (selected.length < 3 || ingredient.source === selected[0]?.source)
+    return false;
   const text = normalizeIngredient(ingredient.text);
-  return selected.every((item) => text.includes(normalizeIngredient(item.text)));
+  return selected.every((item) =>
+    text.includes(normalizeIngredient(item.text)),
+  );
 }
 
-function sameIngredientName(a: ExtractedIngredient, b: ExtractedIngredient): boolean {
+function sameIngredientName(
+  a: ExtractedIngredient,
+  b: ExtractedIngredient,
+): boolean {
   return normalizeIngredient(a.text) === normalizeIngredient(b.text);
 }
 
-function sameIngredientCollection(a: ExtractedIngredient[], b: ExtractedIngredient[]): boolean {
-  return a.length === b.length && a.every((item, index) => sameIngredientName(item, b[index] ?? item));
+function sameIngredientCollection(
+  a: ExtractedIngredient[],
+  b: ExtractedIngredient[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every((item, index) => sameIngredientName(item, b[index] ?? item))
+  );
 }
 
-function sameInstructionCollection(a: ExtractedInstruction[], b: ExtractedInstruction[]): boolean {
-  return a.length === b.length && a.every((item, index) => normalize(item.text) === normalize(b[index]?.text ?? ''));
+function sameInstructionCollection(
+  a: ExtractedInstruction[],
+  b: ExtractedInstruction[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (item, index) => normalize(item.text) === normalize(b[index]?.text ?? ''),
+    )
+  );
 }
 
-function isRicherIngredient(a: ExtractedIngredient, b: ExtractedIngredient): boolean {
-  return a.text.length > b.text.length || Boolean(a.quantity && !b.quantity) || Boolean(a.unit && !b.unit);
+function isRicherIngredient(
+  a: ExtractedIngredient,
+  b: ExtractedIngredient,
+): boolean {
+  return (
+    a.text.length > b.text.length ||
+    Boolean(a.quantity && !b.quantity) ||
+    Boolean(a.unit && !b.unit)
+  );
 }
 
 function uniqueFields<T>(fields: ExtractedField<T>[]): ExtractedField<T>[] {
@@ -226,17 +255,32 @@ function uniqueFields<T>(fields: ExtractedField<T>[]): ExtractedField<T>[] {
 }
 
 function sameValue<T>(a: T | undefined, b: T | undefined): boolean {
-  return a !== undefined && b !== undefined && normalize(String(a)) === normalize(String(b));
+  return (
+    a !== undefined &&
+    b !== undefined &&
+    normalize(String(a)) === normalize(String(b))
+  );
 }
 
-function getScalarReason<T>(selected: ExtractedField<T>, fields: ExtractedField<T>[]): string {
-  return fields.some((field) => field !== selected && String(field.value).length > String(selected.value).length)
+function getScalarReason<T>(
+  selected: ExtractedField<T>,
+  fields: ExtractedField<T>[],
+): string {
+  return fields.some(
+    (field) =>
+      field !== selected &&
+      String(field.value).length > String(selected.value).length,
+  )
     ? 'highest-source-priority'
     : 'highest-confidence';
 }
 
-function averageConfidence<T extends { confidence: number }>(values: T[]): number {
-  return values.length ? values.reduce((sum, value) => sum + value.confidence, 0) / values.length : 0;
+function averageConfidence<T extends { confidence: number }>(
+  values: T[],
+): number {
+  return values.length
+    ? values.reduce((sum, value) => sum + value.confidence, 0) / values.length
+    : 0;
 }
 
 function normalize(value: string): string {

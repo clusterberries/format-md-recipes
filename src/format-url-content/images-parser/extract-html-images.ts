@@ -17,7 +17,11 @@ const IMAGE_URL_ATTRIBUTES = [
   'src',
 ] as const;
 
-const IMAGE_SRCSET_ATTRIBUTES = ['data-srcset', 'data-lazy-srcset', 'srcset'] as const;
+const IMAGE_SRCSET_ATTRIBUTES = [
+  'data-srcset',
+  'data-lazy-srcset',
+  'srcset',
+] as const;
 const MAIN_IMAGE_PATTERN =
   /\b(hero|featured|feature|cover|main|lead|primary|recipe-image|recipe-photo|post-thumbnail|wp-post-image|dish)\b/i;
 const STEP_PATTERN =
@@ -49,7 +53,8 @@ export function extractHtmlImages(
 
     if ($(image).is('[itemprop="image"]')) score += 90;
     if (MAIN_IMAGE_PATTERN.test(imageDescription)) score += 45;
-    if (stepIndex === undefined && /recipe|рецепт/i.test(alt ?? '')) score += 35;
+    if (stepIndex === undefined && /recipe|рецепт/i.test(alt ?? ''))
+      score += 35;
     if (documentIndex < 3) score += 15;
 
     if (width && height) {
@@ -127,7 +132,11 @@ function selectBestSrcsetUrl(srcset?: string): string | undefined {
   return variants[0]?.url;
 }
 
-function shouldDiscardHtmlImage($: cheerio.CheerioAPI, image: Element, url: string): boolean {
+function shouldDiscardHtmlImage(
+  $: cheerio.CheerioAPI,
+  image: Element,
+  url: string,
+): boolean {
   const $image = $(image);
   const fingerprint = getImageFingerprint($, image);
   if (!isUsableImageUrl(url)) return true;
@@ -147,7 +156,11 @@ function findStepContainers($: cheerio.CheerioAPI): Element[] {
   $('[class], [id], [data-testid], [data-test]').each((_, element) => {
     const fingerprint = getElementFingerprint($, element);
     const $element = $(element);
-    if (STEP_PATTERN.test(fingerprint) && $element.find('img').length > 0 && $element.text().trim().length > 20) {
+    if (
+      STEP_PATTERN.test(fingerprint) &&
+      $element.find('img').length > 0 &&
+      $element.text().trim().length > 20
+    ) {
       containers.add(element);
     }
   });
@@ -155,8 +168,14 @@ function findStepContainers($: cheerio.CheerioAPI): Element[] {
   $('li').each((_, element) => {
     const $item = $(element);
     const parentFingerprint = getElementFingerprint($, $item.parent().get(0));
-    const grandParentFingerprint = getElementFingerprint($, $item.parent().parent().get(0));
-    if (STEP_PATTERN.test(`${parentFingerprint} ${grandParentFingerprint}`) && $item.find('img').length > 0) {
+    const grandParentFingerprint = getElementFingerprint(
+      $,
+      $item.parent().parent().get(0),
+    );
+    if (
+      STEP_PATTERN.test(`${parentFingerprint} ${grandParentFingerprint}`) &&
+      $item.find('img').length > 0
+    ) {
       containers.add(element);
     }
   });
@@ -165,10 +184,16 @@ function findStepContainers($: cheerio.CheerioAPI): Element[] {
   $('body *').each((index, element) => {
     documentOrder.set(element, index);
   });
-  return [...containers].sort((a, b) => (documentOrder.get(a) ?? 0) - (documentOrder.get(b) ?? 0));
+  return [...containers].sort(
+    (a, b) => (documentOrder.get(a) ?? 0) - (documentOrder.get(b) ?? 0),
+  );
 }
 
-function findStepIndex($: cheerio.CheerioAPI, image: Element, stepContainers: Element[]): number | undefined {
+function findStepIndex(
+  $: cheerio.CheerioAPI,
+  image: Element,
+  stepContainers: Element[],
+): number | undefined {
   const ancestors = $(image).parents().toArray();
   const matches = stepContainers
     .map((container, index) => ({
@@ -182,21 +207,33 @@ function findStepIndex($: cheerio.CheerioAPI, image: Element, stepContainers: El
   return matches[0]?.index;
 }
 
-function inferStepIndexFromText(alt?: string, title?: string): number | undefined {
-  const match = `${alt ?? ''} ${title ?? ''}`.match(/(?:step|шаг)\s*[#№]?\s*(\d+)/i);
+function inferStepIndexFromText(
+  alt?: string,
+  title?: string,
+): number | undefined {
+  const match = `${alt ?? ''} ${title ?? ''}`.match(
+    /(?:step|шаг)\s*[#№]?\s*(\d+)/i,
+  );
   if (!match) return undefined;
   const stepNumber = Number.parseInt(match[1] ?? '', 10);
-  return Number.isInteger(stepNumber) && stepNumber > 0 ? stepNumber - 1 : undefined;
+  return Number.isInteger(stepNumber) && stepNumber > 0
+    ? stepNumber - 1
+    : undefined;
 }
 
-function deduplicateHtmlCandidates(candidates: HtmlImageCandidate[]): HtmlImageCandidate[] {
+function deduplicateHtmlCandidates(
+  candidates: HtmlImageCandidate[],
+): HtmlImageCandidate[] {
   const byLocation = new Map<string, HtmlImageCandidate>();
   for (const candidate of candidates) {
     const key = `${candidate.url}:${candidate.stepIndex ?? 'main'}`;
     const existing = byLocation.get(key);
-    if (!existing || candidate.score > existing.score) byLocation.set(key, candidate);
+    if (!existing || candidate.score > existing.score)
+      byLocation.set(key, candidate);
   }
-  return [...byLocation.values()].sort((a, b) => a.documentIndex - b.documentIndex);
+  return [...byLocation.values()].sort(
+    (a, b) => a.documentIndex - b.documentIndex,
+  );
 }
 
 function getImageFingerprint($: cheerio.CheerioAPI, image: Element): string {
@@ -217,7 +254,10 @@ function getImageFingerprint($: cheerio.CheerioAPI, image: Element): string {
     .join(' ');
 }
 
-function getElementFingerprint($: cheerio.CheerioAPI, element?: Element): string {
+function getElementFingerprint(
+  $: cheerio.CheerioAPI,
+  element?: Element,
+): string {
   if (!element) return '';
   const $element = $(element);
   return [
@@ -228,5 +268,7 @@ function getElementFingerprint($: cheerio.CheerioAPI, element?: Element): string
     $element.attr('itemprop'),
     $element.attr('itemtype'),
     $element.attr('aria-label'),
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 }

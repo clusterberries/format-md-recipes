@@ -14,11 +14,12 @@ export function buildRecipeImagesResult(
   const explicitMainImage = schemaMainImages[0];
   const metadataMainImage = chooseBestHtmlMainImage(metadataImages);
   const associatedMainImage =
-    metadataMainImage && htmlCandidates.some((candidate) =>
+    metadataMainImage &&
+    htmlCandidates.some((candidate) =>
       /(?:-\d+x\d+)(?:\.[a-z]+)?$/i.test(candidate.url),
     )
       ? metadataMainImage
-      : chooseBestHtmlMainImage(htmlCandidates) ?? metadataMainImage;
+      : (chooseBestHtmlMainImage(htmlCandidates) ?? metadataMainImage);
   const bestStepFallback =
     chooseLastStepImage(htmlCandidates) ?? schemaStepImages.at(-1);
   const mainImage = explicitMainImage

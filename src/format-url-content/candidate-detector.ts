@@ -33,7 +33,7 @@ export function detectRecipeCandidates(params: {
     ...params.recipeHtml.map((candidate, index) =>
       scoreContentCandidate(candidate, `html-${index}`, params.$, false),
     ),
-    ...scoreFormCandidates(params.forms, params.$),
+    ...scoreFormCandidates(params.forms),
     ...(params.readability
       ? [scoreReadabilityCandidate(params.readability, params.$)]
       : []),
@@ -56,9 +56,7 @@ function scoreJsonLdCandidate(
     vocabularyText: JSON.stringify(recipe),
     hasTitle: Boolean(title),
     hasServings: Boolean(recipe.recipeYield),
-    hasTimes: Boolean(
-      recipe.prepTime || recipe.cookTime || recipe.totalTime,
-    ),
+    hasTimes: Boolean(recipe.prepTime || recipe.cookTime || recipe.totalTime),
     hasImages: Boolean(recipe.image),
     hasMicrodata: false,
     linkDensity: 0,
@@ -84,7 +82,11 @@ function scoreContentCandidate(
   $: cheerio.CheerioAPI,
   hasMicrodata: boolean,
 ): RecipeCandidate {
-  const element = findElementByLocation($, candidate.location, candidate.source);
+  const element = findElementByLocation(
+    $,
+    candidate.location,
+    candidate.source,
+  );
   const text = [
     candidate.title ?? '',
     ...candidate.ingredients,
@@ -104,18 +106,25 @@ function scoreContentCandidate(
     consistencyText: text,
   });
 
-  return buildCandidate(id, candidate.source, candidate.location, candidate.title, signals);
+  return buildCandidate(
+    id,
+    candidate.source,
+    candidate.location,
+    candidate.title,
+    signals,
+  );
 }
 
-function scoreFormCandidates(
-  forms: FormRecipeValue[],
-  $: cheerio.CheerioAPI,
-): RecipeCandidate[] {
+function scoreFormCandidates(forms: FormRecipeValue[]): RecipeCandidate[] {
   if (!forms.length) return [];
 
-  const text = forms.map((form) => `${form.label ?? ''} ${form.name ?? ''} ${form.value}`).join(' ');
+  const text = forms
+    .map((form) => `${form.label ?? ''} ${form.name ?? ''} ${form.value}`)
+    .join(' ');
   const signals = createSignals({
-    ingredientCount: forms.filter((form) => /ingredient|ингредиент/i.test(`${form.label} ${form.name}`)).length,
+    ingredientCount: forms.filter((form) =>
+      /ingredient|ингредиент/i.test(`${form.label} ${form.name}`),
+    ).length,
     instructionCount: 0,
     vocabularyText: text,
     hasTitle: false,
@@ -138,7 +147,10 @@ function scoreReadabilityCandidate(
   const text = `${article.title ?? ''} ${article.excerpt ?? ''} ${article.contentHtml}`;
   const signals = createSignals({
     ingredientCount: countMatches(text, /ingredient|ингредиент/gi),
-    instructionCount: countMatches(text, /instruction|direction|step|инструкц|шаг/gi),
+    instructionCount: countMatches(
+      text,
+      /instruction|direction|step|инструкц|шаг/gi,
+    ),
     vocabularyText: text,
     hasTitle: Boolean(article.title),
     hasServings: /servings?|yield|порци/i.test(text),
@@ -150,10 +162,21 @@ function scoreReadabilityCandidate(
     consistencyText: text,
   });
 
-  return buildCandidate('readability-0', 'readability', 'readability', article.title, signals);
+  return buildCandidate(
+    'readability-0',
+    'readability',
+    'readability',
+    article.title,
+    signals,
+  );
 }
 
-function createSignals(input: Omit<RecipeCandidateSignals, 'recipeVocabulary' | 'internalConsistency'> & { vocabularyText: string; consistencyText: string }): RecipeCandidateSignals {
+function createSignals(
+  input: Omit<
+    RecipeCandidateSignals,
+    'recipeVocabulary' | 'internalConsistency'
+  > & { vocabularyText: string; consistencyText: string },
+): RecipeCandidateSignals {
   return {
     ingredientCount: input.ingredientCount,
     instructionCount: input.instructionCount,
@@ -165,7 +188,11 @@ function createSignals(input: Omit<RecipeCandidateSignals, 'recipeVocabulary' | 
     hasMicrodata: input.hasMicrodata,
     linkDensity: input.linkDensity,
     noisePenalty: input.noisePenalty,
-    internalConsistency: getInternalConsistency(input.ingredientCount, input.instructionCount, input.consistencyText),
+    internalConsistency: getInternalConsistency(
+      input.ingredientCount,
+      input.instructionCount,
+      input.consistencyText,
+    ),
   };
 }
 
@@ -192,7 +219,11 @@ function buildCandidate(
   return { id, source, location, score, title, signals };
 }
 
-function getInternalConsistency(ingredientCount: number, instructionCount: number, text: string): number {
+function getInternalConsistency(
+  ingredientCount: number,
+  instructionCount: number,
+  text: string,
+): number {
   if (!ingredientCount && !instructionCount) return 0;
   let score = 0.3;
   if (ingredientCount >= 2) score += 0.3;
@@ -213,10 +244,13 @@ function findElementByLocation(
       ? '[itemtype*="Recipe" i]'
       : '[class], [id], article, main, section';
   const elements = $(selector).toArray();
-  return elements[index] as Element | undefined;
+  return elements[index];
 }
 
-function findSchemaAssociation($: cheerio.CheerioAPI, recipe: RecipeSchema): string | null {
+function findSchemaAssociation(
+  $: cheerio.CheerioAPI,
+  recipe: RecipeSchema,
+): string | null {
   const ids = [recipe['@id'], recipe.mainEntityOfPage].flatMap((value) =>
     typeof value === 'string' ? [value, value.replace(/^#/, '')] : [],
   );
@@ -226,7 +260,11 @@ function findSchemaAssociation($: cheerio.CheerioAPI, recipe: RecipeSchema): str
   return null;
 }
 
-function hasNearbySignal($: cheerio.CheerioAPI, element: Element | undefined, pattern: RegExp): boolean {
+function hasNearbySignal(
+  $: cheerio.CheerioAPI,
+  element: Element | undefined,
+  pattern: RegExp,
+): boolean {
   return Boolean(element && pattern.test(getElementContext($, element)));
 }
 
@@ -258,7 +296,14 @@ function toString(value: unknown): string | null {
 }
 
 function toStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && Boolean(item.trim())) : typeof value === 'string' && value.trim() ? [value.trim()] : [];
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is string =>
+          typeof item === 'string' && Boolean(item.trim()),
+      )
+    : typeof value === 'string' && value.trim()
+      ? [value.trim()]
+      : [];
 }
 
 function flattenInstructions(value: unknown): string[] {
@@ -266,7 +311,9 @@ function flattenInstructions(value: unknown): string[] {
   if (Array.isArray(value)) return value.flatMap(flattenInstructions);
   if (typeof value === 'object' && value !== null) {
     const item = value as Record<string, unknown>;
-    return typeof item.text === 'string' ? [item.text] : flattenInstructions(item.itemListElement ?? item.steps);
+    return typeof item.text === 'string'
+      ? [item.text]
+      : flattenInstructions(item.itemListElement ?? item.steps);
   }
   return [];
 }

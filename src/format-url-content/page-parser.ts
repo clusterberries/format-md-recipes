@@ -302,4 +302,3 @@ function normalizeMetadataUrl(
     return null;
   }
 }
-

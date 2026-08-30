@@ -1,5 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { Element } from 'domhandler';
+import { ElementType } from 'domelementtype';
 import {
   BRANDING_IMAGE_SELECTOR,
   GLOBAL_NOISE_SELECTOR,
@@ -23,7 +24,8 @@ const NOISE_HEADING_SELECTOR = 'h2, h3, h4, h5, h6, header';
 const NOISE_CONTAINER_SELECTOR = 'div, section, article';
 const HIGH_LINK_DENSITY = 0.55;
 const MINIMUM_LINKED_TEXT_LENGTH = 25;
-const NOISE_HEADING_PATTERN = /^(автор|поддержать|запланировать|рейтинг|эмоции)$/i;
+const NOISE_HEADING_PATTERN =
+  /^(автор|поддержать|запланировать|рейтинг|эмоции)$/i;
 const RECIPE_INGREDIENT_HEADING_PATTERN = /\b(ingredients?|ингредиенты?)\b/i;
 const RECIPE_INSTRUCTION_HEADING_PATTERN =
   /\b(instructions?|directions?|method|steps?|приготовление|инструкции|шаги)\b/i;
@@ -32,7 +34,7 @@ export function removeHtmlComments(root: Cheerio<Element>): void {
   root
     .add(root.find('*'))
     .contents()
-    .filter((_, node) => node.type === 'comment')
+    .filter((_, node) => node.type === ElementType.Comment)
     .remove();
 }
 
@@ -108,8 +110,7 @@ export function removeNoiseByText(
       (hasHighLinkDensity && text.length >= MINIMUM_LINKED_TEXT_LENGTH)
     ) {
       const isNoiseHeading =
-        $element.is(NOISE_HEADING_SELECTOR) ||
-        NOISE_HEADING_PATTERN.test(text);
+        $element.is(NOISE_HEADING_SELECTOR) || NOISE_HEADING_PATTERN.test(text);
       const $container = isNoiseHeading
         ? $element.closest(NOISE_CONTAINER_SELECTOR).first()
         : $element;
@@ -130,35 +131,31 @@ export function shouldProtectRecipeElement(
     return true;
   }
 
-  if (
-    $element.find(
-      RECIPE_COMPONENT_SELECTOR,
-    ).length > 0
-  ) {
+  if ($element.find(RECIPE_COMPONENT_SELECTOR).length > 0) {
     return true;
   }
 
   const text = normalizeText($element.text()).slice(0, MAX_RECIPE_TEXT_LENGTH);
-  const containsIngredientHeading = RECIPE_INGREDIENT_HEADING_PATTERN.test(text);
-  const containsInstructionHeading = RECIPE_INSTRUCTION_HEADING_PATTERN.test(text);
+  const containsIngredientHeading =
+    RECIPE_INGREDIENT_HEADING_PATTERN.test(text);
+  const containsInstructionHeading =
+    RECIPE_INSTRUCTION_HEADING_PATTERN.test(text);
   const hasList = $element.find('li').length >= 2;
 
   return hasList && (containsIngredientHeading || containsInstructionHeading);
 }
 
-function removeBrandingImages(
-  $: CheerioAPI,
-  root: Cheerio<Element>,
-): void {
+function removeBrandingImages($: CheerioAPI, root: Cheerio<Element>): void {
   root.find(BRANDING_IMAGE_SELECTOR).each((_, el) => {
     const $image = $(el);
     const $link = $image.closest('a');
 
     if (
       $link.length &&
-      $link.find('img').toArray().every((image) =>
-        $(image).is(BRANDING_IMAGE_SELECTOR),
-      ) &&
+      $link
+        .find('img')
+        .toArray()
+        .every((image) => $(image).is(BRANDING_IMAGE_SELECTOR)) &&
       !normalizeText($link.clone().find('img').remove().end().text())
     ) {
       $link.remove();

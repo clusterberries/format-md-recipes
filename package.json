@@ -20,7 +20,12 @@
     "format-list": "node ./src/format-list.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "tsc-check": "tsc --noEmit"
+    "tsc-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format:write": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
@@ -29,6 +34,7 @@
     "cheerio": "^1.2.0",
     "commander": "^11.0.0",
     "dotenv": "^16.0.0",
+    "domelementtype": "^2.3.0",
     "html-encoding-sniffer": "^6.0.0",
     "iconv-lite": "^0.7.3",
     "jsdom": "^29.1.1",
@@ -36,11 +42,24 @@
     "turndown": "^7.2.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/html-encoding-sniffer": "^3.0.2",
     "@types/jsdom": "^28.0.3",
     "@types/node": "^26.1.0",
     "@types/turndown": "^5.0.6",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.68.0",
     "vitest": "^4.1.11"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }

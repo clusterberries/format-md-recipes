@@ -1,9 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { Element } from 'domhandler';
-import {
-  CLEANUP_PASSES,
-  REMOVABLE_EMPTY_SELECTOR,
-} from './constants.ts';
+import { CLEANUP_PASSES, REMOVABLE_EMPTY_SELECTOR } from './constants.ts';
 import { normalizeText } from './utils.ts';
 import { shouldProtectRecipeElement } from './noise-remover.ts';
 

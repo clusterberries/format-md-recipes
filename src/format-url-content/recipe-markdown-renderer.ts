@@ -168,14 +168,20 @@ export function renderImage(
   ) {
     altSource = fallbackAlt || actualFallback;
   }
-  const alt = altSource.replace(/[\[\]]/g, '').trim();
+  const alt = altSource.replace(/[[\]]/g, '').trim();
   return `![${alt}](${image.url})`;
 }
 
 function escapeHeading(value: string): string {
-  return value.replace(/\r?\n/g, ' ').replace(/^#+\s*/, '').trim();
+  return value
+    .replace(/\r?\n/g, ' ')
+    .replace(/^#+\s*/, '')
+    .trim();
 }
 
 function escapeListText(value: string): string {
-  return value.replace(/\r?\n/g, ' ').replace(/^\s*[-*+]\s+/, '').trim();
+  return value
+    .replace(/\r?\n/g, ' ')
+    .replace(/^\s*[-*+]\s+/, '')
+    .trim();
 }

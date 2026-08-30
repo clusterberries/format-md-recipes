@@ -2,7 +2,6 @@ import { MINI_MODEL } from '../shared/constants.ts';
 import { callOpenAI } from '../shared/openai-client.ts';
 import { logInfo, logWarning } from '../shared/utils.ts';
 import type {
-  ExtractedField,
   ExtractedIngredient,
   ExtractedInstruction,
   RecipeCandidate,
@@ -90,17 +89,15 @@ export async function resolveRecipeConflicts(
 
   try {
     logInfo(`Calling AI (${MINI_MODEL}) to resolve recipe conflicts...`);
-    const response = await callOpenAI(
-      payload,
-      MINI_MODEL,
-      {
-        systemPrompt: AI_SYSTEM_PROMPT,
-        maxCompletionTokens: 1200,
-      },
-    );
+    const response = await callOpenAI(payload, MINI_MODEL, {
+      systemPrompt: AI_SYSTEM_PROMPT,
+      maxCompletionTokens: 1200,
+    });
     const decision = parseDecision(response);
     if (!decision) {
-      logWarning('AI conflict resolution returned an invalid response. Using deterministic result.');
+      logWarning(
+        'AI conflict resolution returned an invalid response. Using deterministic result.',
+      );
       return { recipe, called: true, applied: false, reasons };
     }
 
@@ -113,30 +110,53 @@ export async function resolveRecipeConflicts(
     );
     return { recipe: resolved, called: true, applied, reasons };
   } catch (error) {
-    logWarning(`AI conflict resolution failed: ${getErrorMessage(error)}. Using deterministic result.`);
+    logWarning(
+      `AI conflict resolution failed: ${getErrorMessage(error)}. Using deterministic result.`,
+    );
     return { recipe, called: true, applied: false, reasons };
   }
 }
 
-function getAiReasons(recipe: ReconciledRecipe, candidates: RecipeCandidate[]): string[] {
+function getAiReasons(
+  recipe: ReconciledRecipe,
+  candidates: RecipeCandidate[],
+): string[] {
   const reasons: string[] = [];
   if (recipe.conflicts.length) reasons.push('field conflicts detected');
-  if (candidates.length > 1 && candidates[0] && candidates[1] && candidates[0].score - candidates[1].score <= SIMILAR_CANDIDATE_SCORE_GAP) {
+  if (
+    candidates.length > 1 &&
+    candidates[0] &&
+    candidates[1] &&
+    candidates[0].score - candidates[1].score <= SIMILAR_CANDIDATE_SCORE_GAP
+  ) {
     reasons.push('recipe candidates have similar scores');
   }
-  if (recipe.ingredients.value.length < 2 && recipe.ingredients.alternatives.some((value) => value.length >= 2)) {
+  if (
+    recipe.ingredients.value.length < 2 &&
+    recipe.ingredients.alternatives.some((value) => value.length >= 2)
+  ) {
     reasons.push('selected ingredients may be incomplete');
   }
-  if (recipe.instructions.value.length < 2 && recipe.instructions.alternatives.some((value) => value.length >= 2)) {
+  if (
+    recipe.instructions.value.length < 2 &&
+    recipe.instructions.alternatives.some((value) => value.length >= 2)
+  ) {
     reasons.push('selected instructions may be incomplete');
   }
-  if (recipe.ingredients.conflicts.length || recipe.instructions.conflicts.length) {
+  if (
+    recipe.ingredients.conflicts.length ||
+    recipe.instructions.conflicts.length
+  ) {
     reasons.push('recipe collections disagree');
   }
   return [...new Set(reasons)];
 }
 
-function buildPayload(recipe: ReconciledRecipe, candidates: RecipeCandidate[], reasons: string[]): string | null {
+function buildPayload(
+  recipe: ReconciledRecipe,
+  candidates: RecipeCandidate[],
+  reasons: string[],
+): string | null {
   const payload = JSON.stringify({
     reasons,
     fields: {
@@ -146,32 +166,60 @@ function buildPayload(recipe: ReconciledRecipe, candidates: RecipeCandidate[], r
       prepTime: compactField(recipe.prepTime),
       cookTime: compactField(recipe.cookTime),
       totalTime: compactField(recipe.totalTime),
-      ingredients: compactCollection(recipe.ingredients.value, recipe.ingredients.alternatives),
-      instructions: compactCollection(recipe.instructions.value, recipe.instructions.alternatives),
+      ingredients: compactCollection(
+        recipe.ingredients.value,
+        recipe.ingredients.alternatives,
+      ),
+      instructions: compactCollection(
+        recipe.instructions.value,
+        recipe.instructions.alternatives,
+      ),
     },
-    candidates: candidates.slice(0, 6).map(({ id, source, score, title }) => ({ id, source, score, title })),
+    candidates: candidates
+      .slice(0, 6)
+      .map(({ id, source, score, title }) => ({ id, source, score, title })),
   });
   return payload.length <= MAX_AI_INPUT_LENGTH ? payload : null;
 }
 
-function compactField<T>(field: ReconciledRecipe['title']): object {
+function compactField(field: ReconciledRecipe['title']): object {
   return {
     selected: field.value,
-    alternatives: field.alternatives.map(({ value, source, confidence }) => ({ value, source, confidence })),
+    alternatives: field.alternatives.map(({ value, source, confidence }) => ({
+      value,
+      source,
+      confidence,
+    })),
   };
 }
 
-function compactCollection<T extends ExtractedIngredient | ExtractedInstruction>(selected: T[], alternatives: T[][]): object {
+function compactCollection<
+  T extends ExtractedIngredient | ExtractedInstruction,
+>(selected: T[], alternatives: T[][]): object {
   return {
     selected: selected.map(compactCollectionItem),
     alternatives: alternatives.map((group) => group.map(compactCollectionItem)),
   };
 }
 
-function compactCollectionItem(item: ExtractedIngredient | ExtractedInstruction): object {
+function compactCollectionItem(
+  item: ExtractedIngredient | ExtractedInstruction,
+): object {
   return 'stepIndex' in item
-    ? { text: item.text, stepIndex: item.stepIndex, source: item.source, confidence: item.confidence }
-    : { text: item.text, quantity: item.quantity, unit: item.unit, name: item.name, source: item.source, confidence: item.confidence };
+    ? {
+        text: item.text,
+        stepIndex: item.stepIndex,
+        source: item.source,
+        confidence: item.confidence,
+      }
+    : {
+        text: item.text,
+        quantity: item.quantity,
+        unit: item.unit,
+        name: item.name,
+        source: item.source,
+        confidence: item.confidence,
+      };
 }
 
 function parseDecision(value: string): AiDecision | null {
@@ -188,36 +236,63 @@ function isAiDecision(value: unknown): value is AiDecision {
 }
 
 function validateDecision(decision: AiDecision): boolean {
-  if (decision.unresolved && !decision.unresolved.every((item) => typeof item === 'string')) return false;
+  if (
+    decision.unresolved &&
+    !decision.unresolved.every((item) => typeof item === 'string')
+  )
+    return false;
   if (!decision.fields) return true;
   for (const field of Object.values(decision.fields)) {
     if (!field || !isAllowedAction(field.action)) return false;
     if (field.action === 'select') {
-      if ('candidateIndex' in field && !isValidIndex(field.candidateIndex)) return false;
-      if ('candidateIndexes' in field && !field.candidateIndexes?.length) return false;
+      if ('candidateIndex' in field && !isValidIndex(field.candidateIndex))
+        return false;
+      if ('candidateIndexes' in field && !field.candidateIndexes?.length)
+        return false;
     }
   }
-  if (decision.fields.ingredients && !validateCollectionDecision(decision.fields.ingredients)) return false;
-  if (decision.fields.instructions && !validateCollectionDecision(decision.fields.instructions)) return false;
+  if (
+    decision.fields.ingredients &&
+    !validateCollectionDecision(decision.fields.ingredients)
+  )
+    return false;
+  if (
+    decision.fields.instructions &&
+    !validateCollectionDecision(decision.fields.instructions)
+  )
+    return false;
   return true;
 }
 
 function validateCollectionDecision(decision: AiCollectionDecision): boolean {
   if (!isAllowedAction(decision.action)) return false;
   return decision.action === 'select' || decision.action === 'merge'
-    ? Boolean(decision.candidateIndexes?.length && decision.candidateIndexes.every(isValidIndex))
+    ? Boolean(
+        decision.candidateIndexes?.length &&
+        decision.candidateIndexes.every(isValidIndex),
+      )
     : true;
 }
 
-function isAllowedAction(value: unknown): value is AiFieldDecision['action'] | AiCollectionDecision['action'] {
-  return value === 'select' || value === 'merge' || value === 'keep-deterministic' || value === 'unresolved';
+function isAllowedAction(
+  value: unknown,
+): value is AiFieldDecision['action'] | AiCollectionDecision['action'] {
+  return (
+    value === 'select' ||
+    value === 'merge' ||
+    value === 'keep-deterministic' ||
+    value === 'unresolved'
+  );
 }
 
 function isValidIndex(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0;
 }
 
-function applyDecision(recipe: ReconciledRecipe, decision: AiDecision): ReconciledRecipe {
+function applyDecision(
+  recipe: ReconciledRecipe,
+  decision: AiDecision,
+): ReconciledRecipe {
   let result = recipe;
   const fields = decision.fields;
   if (!fields) return result;
@@ -234,18 +309,44 @@ function applyDecision(recipe: ReconciledRecipe, decision: AiDecision): Reconcil
 
 function applyScalarDecision(
   recipe: ReconciledRecipe,
-  fieldName: 'title' | 'description' | 'servings' | 'prepTime' | 'cookTime' | 'totalTime',
+  fieldName:
+    | 'title'
+    | 'description'
+    | 'servings'
+    | 'prepTime'
+    | 'cookTime'
+    | 'totalTime',
   decision: AiFieldDecision | undefined,
 ): ReconciledRecipe {
-  if (!decision || decision.action !== 'select' || decision.candidateIndex === undefined) return recipe;
+  if (
+    !decision ||
+    decision.action !== 'select' ||
+    decision.candidateIndex === undefined
+  )
+    return recipe;
   const field = recipe[fieldName];
   const candidates = [
-    { value: field.value, source: field.source, confidence: field.confidence, location: field.location },
+    {
+      value: field.value,
+      source: field.source,
+      confidence: field.confidence,
+      location: field.location,
+    },
     ...field.alternatives,
   ];
   const selected = candidates[decision.candidateIndex];
   if (!selected) return recipe;
-  return { ...recipe, [fieldName]: { ...field, value: selected.value, source: selected.source, confidence: selected.confidence, location: selected.location, selectionReason: 'ai-selected' } };
+  return {
+    ...recipe,
+    [fieldName]: {
+      ...field,
+      value: selected.value,
+      source: selected.source,
+      confidence: selected.confidence,
+      location: selected.location,
+      selectionReason: 'ai-selected',
+    },
+  };
 }
 
 function applyCollectionDecision(
@@ -253,20 +354,25 @@ function applyCollectionDecision(
   fieldName: 'ingredients' | 'instructions',
   decision: AiCollectionDecision | undefined,
 ): ReconciledRecipe {
-  if (!decision || (decision.action !== 'select' && decision.action !== 'merge') || !decision.candidateIndexes) return recipe;
+  if (
+    !decision ||
+    (decision.action !== 'select' && decision.action !== 'merge') ||
+    !decision.candidateIndexes
+  )
+    return recipe;
   const collection = recipe[fieldName];
   const candidates = [collection.value, ...collection.alternatives];
   const selectedGroups = decision.candidateIndexes
     .map((index) => candidates[index])
-    .filter(
-      (group): group is ExtractedIngredient[] | ExtractedInstruction[] =>
-        Boolean(group),
+    .filter((group): group is ExtractedIngredient[] | ExtractedInstruction[] =>
+      Boolean(group),
     );
   if (!selectedGroups.length) return recipe;
   const firstGroup = selectedGroups[0];
-  const value = decision.action === 'select'
-    ? firstGroup
-    : deduplicateCollection(selectedGroups.flat());
+  const value =
+    decision.action === 'select'
+      ? firstGroup
+      : deduplicateCollection(selectedGroups.flat());
   if (!value) return recipe;
   return {
     ...recipe,
@@ -275,7 +381,8 @@ function applyCollectionDecision(
       value,
       source: value[0]?.source ?? collection.source,
       confidence: averageCollectionConfidence(value),
-      selectionReason: decision.action === 'merge' ? 'ai-merged' : 'ai-selected',
+      selectionReason:
+        decision.action === 'merge' ? 'ai-merged' : 'ai-selected',
     },
   };
 }
@@ -290,8 +397,12 @@ function deduplicateCollection<T extends { text: string }>(values: T[]): T[] {
   });
 }
 
-function averageCollectionConfidence<T extends { confidence: number }>(values: T[]): number {
-  return values.length ? values.reduce((sum, value) => sum + value.confidence, 0) / values.length : 0;
+function averageCollectionConfidence<T extends { confidence: number }>(
+  values: T[],
+): number {
+  return values.length
+    ? values.reduce((sum, value) => sum + value.confidence, 0) / values.length
+    : 0;
 }
 
 function getErrorMessage(error: unknown): string {

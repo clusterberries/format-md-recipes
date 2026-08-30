@@ -309,10 +309,10 @@ function parseIngredient(
   text: string,
 ): Pick<ExtractedIngredient, 'quantity' | 'unit' | 'name'> {
   const quantityFirstMatch = text.match(
-    /^((?:\d+[\d\s.,\/-]*|[½⅓⅔¼¾]|по вкусу|по желанию)\s*)(г|гр|кг|мл|л|ч\. л\.|ст\. л\.|tsp|tbsp|g|kg|ml|l)?\s*(.*)$/i,
+    /^((?:\d+[\d\s.,/-]*|[½⅓⅔¼¾]|по вкусу|по желанию)\s*)(г|гр|кг|мл|л|ч\. л\.|ст\. л\.|tsp|tbsp|g|kg|ml|l)?\s*(.*)$/i,
   );
   const nameFirstMatch = text.match(
-    /^(.*?)\s*[-:]\s*((?:\d+[\d\s.,\/-]*|[½⅓⅔¼¾]|по вкусу|по желанию)\s*)(г|гр|кг|мл|л|ч\. л\.|ст\. л\.|tsp|tbsp|g|kg|ml|l)?\s*$/i,
+    /^(.*?)\s*[-:]\s*((?:\d+[\d\s.,/-]*|[½⅓⅔¼¾]|по вкусу|по желанию)\s*)(г|гр|кг|мл|л|ч\. л\.|ст\. л\.|tsp|tbsp|g|kg|ml|l)?\s*$/i,
   );
 
   if (!quantityFirstMatch && !nameFirstMatch) {

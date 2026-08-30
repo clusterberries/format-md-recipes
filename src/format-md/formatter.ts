@@ -123,7 +123,9 @@ export async function runFormatter(options: CliOptions) {
       try {
         written = await formatSingleFile(filePath, outputPath, dryRun);
       } catch (error: any) {
-        throw new Error(`Error formatting ${filePath}: ${error.message}`);
+        throw new Error(`Error formatting ${filePath}: ${error.message}`, {
+          cause: error,
+        });
       }
 
       if (written) {
@@ -162,7 +164,9 @@ export async function runFormatter(options: CliOptions) {
     try {
       written = await formatSingleFile(inputPath, outputPath, dryRun);
     } catch (error: any) {
-      throw new Error(`Error formatting ${inputPath}: ${error.message}`);
+      throw new Error(`Error formatting ${inputPath}: ${error.message}`, {
+        cause: error,
+      });
     }
 
     if (!dryRun) {

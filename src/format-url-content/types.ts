@@ -60,11 +60,7 @@ export interface RecipeContentCandidate {
 }
 
 export type RecipeCandidateSource =
-  | 'json-ld'
-  | 'microdata'
-  | 'html'
-  | 'form'
-  | 'readability';
+  'json-ld' | 'microdata' | 'html' | 'form' | 'readability';
 
 export type FieldSource = RecipeCandidateSource | 'metadata';
 

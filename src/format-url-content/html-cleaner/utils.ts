@@ -1,10 +1,7 @@
 import type { CheerioAPI } from 'cheerio';
 import type { Element } from 'domhandler';
 
-export function getFingerprint(
-  $: CheerioAPI,
-  element?: Element,
-): string {
+export function getFingerprint($: CheerioAPI, element?: Element): string {
   if (!element) {
     return '';
   }

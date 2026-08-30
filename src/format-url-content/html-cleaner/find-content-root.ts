@@ -1,5 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { Element } from 'domhandler';
+import { ElementType } from 'domelementtype';
 import {
   MAIN_CONTENT_SELECTOR,
   MINIMAL_NOISE_PATTERN,
@@ -63,11 +64,13 @@ function findSemanticRecipeRoot($: CheerioAPI): Cheerio<Element> {
   const instruction = $(RECIPE_INSTRUCTION_SELECTOR).first();
 
   if (!ingredient.length || !instruction.length) {
-    return $('body').first().filter(() => false);
+    return $('body')
+      .first()
+      .filter(() => false);
   }
 
   const ancestors = ingredient.parents().filter((_, element) => {
-    if (element.type !== 'tag') {
+    if (element.type !== ElementType.Tag) {
       return false;
     }
 
@@ -87,14 +90,14 @@ function collectRootCandidates($: CheerioAPI): Set<Element> {
 
   for (const selector of MAIN_CONTENT_SELECTOR) {
     $(selector).each((_, element) => {
-      if (element.type === 'tag') {
+      if (element.type === ElementType.Tag) {
         candidates.add(element);
       }
     });
   }
 
   $(ROOT_CANDIDATE_ATTRIBUTE_SELECTOR).each((_, element) => {
-    if (element.type !== 'tag') {
+    if (element.type !== ElementType.Tag) {
       return;
     }
 
@@ -108,10 +111,7 @@ function collectRootCandidates($: CheerioAPI): Set<Element> {
   return candidates;
 }
 
-function scoreCandidate(
-  $: CheerioAPI,
-  $candidate: Cheerio<Element>,
-): number {
+function scoreCandidate($: CheerioAPI, $candidate: Cheerio<Element>): number {
   const text = normalizeText($candidate.text());
   const textLength = text.length;
 

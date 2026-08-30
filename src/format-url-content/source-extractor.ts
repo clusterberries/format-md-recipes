@@ -34,12 +34,12 @@ export function extractIndependentSources(
 ): ExtractedPageSources {
   const document = cheerio.load(html);
   const jsonLd = extractJsonLdRecipes(document);
-  const microdata = selectBestCandidates(deduplicateOverlappingCandidates(
-    extractMicrodataCandidates(document),
-  ));
-  const recipeHtml = selectBestCandidates(deduplicateOverlappingCandidates(
-    extractRecipeHtmlCandidates(document),
-  ));
+  const microdata = selectBestCandidates(
+    deduplicateOverlappingCandidates(extractMicrodataCandidates(document)),
+  );
+  const recipeHtml = selectBestCandidates(
+    deduplicateOverlappingCandidates(extractRecipeHtmlCandidates(document)),
+  );
   const forms = extractRecipeFormValues(document);
   const images = buildRecipeImagesResult(
     jsonLd.flatMap((recipe) => extractSchemaMainImages(recipe, pageUrl)),
@@ -165,8 +165,16 @@ function extractRecipeHtmlCandidates(
 
   for (const [index, root] of [...roots].entries()) {
     const $root = $(root);
-    const ingredientContainer = resolveListSection($, $root, INGREDIENT_PATTERN);
-    const instructionContainer = resolveListSection($, $root, INSTRUCTION_PATTERN);
+    const ingredientContainer = resolveListSection(
+      $,
+      $root,
+      INGREDIENT_PATTERN,
+    );
+    const instructionContainer = resolveListSection(
+      $,
+      $root,
+      INSTRUCTION_PATTERN,
+    );
 
     const candidate: RecipeContentCandidate = {
       source: 'html',
@@ -209,7 +217,11 @@ function extractRecipeFormValues($: cheerio.CheerioAPI): FormRecipeValue[] {
 
         const id = $control.attr('id');
         const label = id
-          ? $container.find(`label[for="${escapeSelectorValue(id)}"]`).first().text().trim()
+          ? $container
+              .find(`label[for="${escapeSelectorValue(id)}"]`)
+              .first()
+              .text()
+              .trim()
           : $control.closest('label').text().trim();
 
         values.push({
@@ -251,9 +263,13 @@ function findSection(
   $root: cheerio.Cheerio<Element>,
   pattern: RegExp,
 ): cheerio.Cheerio<Element> {
-  const matching = $root.find('[class], [id], h1, h2, h3, h4, section, div').filter(
-    (_, element) => pattern.test(getFingerprint($, element) + ' ' + $(element).text().slice(0, 300)),
-  );
+  const matching = $root
+    .find('[class], [id], h1, h2, h3, h4, section, div')
+    .filter((_, element) =>
+      pattern.test(
+        getFingerprint($, element) + ' ' + $(element).text().slice(0, 300),
+      ),
+    );
 
   const match = matching.first();
   if (!match.length) return match;
@@ -326,10 +342,7 @@ function extractListValues(
   return fallback ? uniqueStrings([fallback]) : [];
 }
 
-function extractListItemText(
-  $: cheerio.CheerioAPI,
-  element: Element,
-): string {
+function extractListItemText($: cheerio.CheerioAPI, element: Element): string {
   const $element = $(element);
   if (isSkippedInstructionItem($element)) return '';
 
@@ -408,7 +421,11 @@ function extractHtmlDescription(
     const tag = element.tagName.toLowerCase();
     const text = $element.text().replace(/\s+/g, ' ').trim();
     if (!text) return;
-    if (tag === 'h2' && (INGREDIENT_PATTERN.test(text) || INSTRUCTION_PATTERN.test(text))) return;
+    if (
+      tag === 'h2' &&
+      (INGREDIENT_PATTERN.test(text) || INSTRUCTION_PATTERN.test(text))
+    )
+      return;
     if (tag === 'h2') {
       entryParts.push($.html(element));
       return;
@@ -462,22 +479,12 @@ function extractHtmlRecipeMeta(
       }
     });
 
-  const yieldValue = extractElementValue($root.find('[itemprop="recipeYield" i]').first());
+  const yieldValue = extractElementValue(
+    $root.find('[itemprop="recipeYield" i]').first(),
+  );
   if (yieldValue) meta.servings = yieldValue;
 
   return meta;
-}
-
-function extractInstructionValues(
-  $: cheerio.CheerioAPI,
-  $elements: cheerio.Cheerio<Element>,
-): string[] {
-  return uniqueStrings(
-    $elements
-      .map((_, element) => extractListItemText($, element))
-      .get()
-      .filter(Boolean),
-  );
 }
 
 function extractElementValues(
@@ -492,7 +499,9 @@ function extractElementValues(
   );
 }
 
-function extractElementValue($element: cheerio.Cheerio<Element>): string | null {
+function extractElementValue(
+  $element: cheerio.Cheerio<Element>,
+): string | null {
   const value =
     $element.attr('content')?.trim() ||
     $element.attr('value')?.trim() ||
@@ -539,12 +548,13 @@ function candidateScore(candidate: RecipeContentCandidate): number {
 function deduplicateOverlappingCandidates(
   candidates: RecipeContentCandidate[],
 ): RecipeContentCandidate[] {
-  return candidates.filter((candidate, index) =>
-    !candidates.some((other, otherIndex) => {
-      if (index === otherIndex) return false;
-      if (candidateScore(other) <= candidateScore(candidate)) return false;
-      return isCandidateSubset(candidate, other);
-    }),
+  return candidates.filter(
+    (candidate, index) =>
+      !candidates.some((other, otherIndex) => {
+        if (index === otherIndex) return false;
+        if (candidateScore(other) <= candidateScore(candidate)) return false;
+        return isCandidateSubset(candidate, other);
+      }),
   );
 }
 
@@ -583,7 +593,10 @@ function selectBestCandidates(
 function isSkippedInstructionItem($element: cheerio.Cheerio<Element>): boolean {
   const className = $element.attr('class') ?? '';
   if (/\bas-ad-step\b/i.test(className)) return true;
-  if (/\bnoprint\b/i.test(className) && !$element.find('.instruction, p').text().trim()) {
+  if (
+    /\bnoprint\b/i.test(className) &&
+    !$element.find('.instruction, p').text().trim()
+  ) {
     return true;
   }
   return false;
@@ -604,9 +617,12 @@ function getFingerprint($: cheerio.CheerioAPI, element: Element): string {
 }
 
 function isRecipeType(type: unknown): boolean {
-  const values = typeof type === 'string' ? [type] : Array.isArray(type) ? type : [];
+  const values =
+    typeof type === 'string' ? [type] : Array.isArray(type) ? type : [];
   return values.some(
-    (value) => typeof value === 'string' && value.split(/[/:]/).at(-1)?.toLowerCase() === 'recipe',
+    (value) =>
+      typeof value === 'string' &&
+      value.split(/[/:]/).at(-1)?.toLowerCase() === 'recipe',
   );
 }
 
@@ -649,7 +665,9 @@ function uniqueStrings(values: string[]): string[] {
 }
 
 function isImageOnlyMarkup(value: string): boolean {
-  return /^\s*<(?:img|picture|source)\b[^>]*>(?:\s*<\/[^>]+>)?\s*$/i.test(value);
+  return /^\s*<(?:img|picture|source)\b[^>]*>(?:\s*<\/[^>]+>)?\s*$/i.test(
+    value,
+  );
 }
 
 function escapeSelectorValue(value: string): string {

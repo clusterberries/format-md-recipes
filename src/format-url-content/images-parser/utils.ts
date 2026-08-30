@@ -24,7 +24,10 @@ export function isUsableImageUrl(url: string): boolean {
   );
 }
 
-export function normalizeUrl(value: string, pageUrl: string): string | undefined {
+export function normalizeUrl(
+  value: string,
+  pageUrl: string,
+): string | undefined {
   try {
     const url = new URL(value.trim(), pageUrl);
 

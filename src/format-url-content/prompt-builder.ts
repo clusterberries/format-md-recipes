@@ -273,6 +273,6 @@ tags:
 `;
 
 export function buildPrompt(content: string) {
-  const template =  RECIPE_FORMAT_PROMPT;
+  const template = RECIPE_FORMAT_PROMPT;
   return template.replace('{{RECIPE_CONTENT}}', content);
 }

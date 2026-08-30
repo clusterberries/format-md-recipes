@@ -30,7 +30,7 @@ export function formatText(text: string): string {
 
 async function formatSingleFile(inputPath: string, dryRun: boolean) {
   const inputText = await readFile(inputPath);
-  let formatted = '';
+  let formatted: string;
 
   if (!inputText || inputText.trim() === '') {
     logWarning(`Input file is empty: ${inputPath}.`);
@@ -67,7 +67,10 @@ export async function runFormatter(options: FormatListCliOptions) {
     } else {
       console.log('✅ Dry run complete.');
     }
-  } catch (error: any) {
-    throw new Error(`Error formatting ${inputPath}: ${error.message}`);
+  } catch (error) {
+    throw new Error(
+      `Error formatting ${inputPath}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
   }
 }

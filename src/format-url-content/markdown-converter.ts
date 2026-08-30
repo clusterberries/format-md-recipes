@@ -68,9 +68,7 @@ export function convertRecipeHtmlToMarkdown(
     replacement: () => '\n',
   });
 
-  let markdown = html.trim()
-    ? turndown.turndown(html)
-    : '';
+  let markdown = html.trim() ? turndown.turndown(html) : '';
 
   markdown = normalizeMarkdown(markdown);
 
@@ -115,8 +113,5 @@ function normalizeMarkdown(markdown: string): string {
 }
 
 function normalizeAltText(value: string): string {
-  return value
-    .replace(/\s+/g, ' ')
-    .replace(/[[\]]/g, '')
-    .trim();
+  return value.replace(/\s+/g, ' ').replace(/[[\]]/g, '').trim();
 }
