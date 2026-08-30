@@ -6,12 +6,14 @@ import { extractIndependentSources } from './source-extractor.ts';
 import { extractNormalizedRecipe } from './field-extractor.ts';
 import { reconcileRecipe } from './reconciler.ts';
 import { logInfo, logWarning } from '../shared/utils.ts';
+import { assertSafeUrl } from './url-guard.ts';
 import type { PageMetadata, ParsedRecipePage } from './types.ts';
 
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
 const MAX_FETCH_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 250;
+const MAX_REDIRECTS = 5;
 
 class RetryableFetchError extends Error {}
 
@@ -129,20 +131,7 @@ async function fetchPageAttempt(url: string): Promise<{
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    let response: Response;
-
-    try {
-      response = await fetch(url, {
-        headers: {
-          // Some sites reject requests without a browser-like UA.
-          'User-Agent':
-            'Mozilla/5.0 (compatible; RecipeParser/1.0; +https://example.com)',
-        },
-        signal: controller.signal,
-      });
-    } catch (error) {
-      throw new RetryableFetchError(getErrorMessage(error));
-    }
+    const response = await fetchFollowingRedirects(url, controller.signal);
 
     if (!response.ok) {
       const error = new Error(
@@ -187,6 +176,61 @@ async function fetchPageAttempt(url: string): Promise<{
   }
 }
 
+async function fetchFollowingRedirects(
+  url: string,
+  signal: AbortSignal,
+): Promise<Response> {
+  let currentUrl = assertSafeUrl(url).href;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    let response: Response;
+
+    try {
+      response = await fetch(currentUrl, {
+        headers: {
+          // Some sites reject requests without a browser-like UA.
+          'User-Agent':
+            'Mozilla/5.0 (compatible; RecipeParser/1.0; +https://example.com)',
+        },
+        redirect: 'manual',
+        signal,
+      });
+    } catch (error) {
+      throw new RetryableFetchError(getErrorMessage(error));
+    }
+
+    if (!isRedirectStatus(response.status)) {
+      return response;
+    }
+
+    if (hop === MAX_REDIRECTS) {
+      throw new Error(`Too many redirects while fetching ${url}`);
+    }
+
+    const location = response.headers.get('location');
+    if (!location) {
+      throw new Error(
+        `Redirect response missing Location header for ${currentUrl}`,
+      );
+    }
+
+    // Re-validate every hop so a redirect can't be used to reach a private/local address.
+    currentUrl = assertSafeUrl(new URL(location, currentUrl).href).href;
+  }
+
+  throw new Error(`Too many redirects while fetching ${url}`);
+}
+
+function isRedirectStatus(status: number): boolean {
+  return (
+    status === 301 ||
+    status === 302 ||
+    status === 303 ||
+    status === 307 ||
+    status === 308
+  );
+}
+
 function isRetryableFetchError(error: unknown): boolean {
   if (error instanceof RetryableFetchError) return true;
 
@@ -208,6 +252,12 @@ async function waitBeforeRetry(attempt: number): Promise<void> {
 
 async function readResponseBuffer(response: Response): Promise<Buffer> {
   if (!response.body) {
+    const contentLength = Number(response.headers.get('content-length'));
+
+    if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
+      throw new Error(`Response exceeds the ${MAX_RESPONSE_BYTES}-byte limit`);
+    }
+
     const buffer = Buffer.from(await response.arrayBuffer());
 
     if (buffer.byteLength > MAX_RESPONSE_BYTES) {

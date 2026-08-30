@@ -8,6 +8,7 @@ import type {
   RecipeContentCandidate,
   RecipeSchema,
 } from './types.ts';
+import { escapeCssSelectorValue } from './css-selector-utils.ts';
 
 const RECIPE_WORD_PATTERN =
   /\b(recipe|ingredients?|instructions?|directions?|method|preparation|steps?|how-to|servings?|рецепт|ингредиент|инструкц|приготовлен|шаг|порци)\b/gi;
@@ -255,7 +256,11 @@ function findSchemaAssociation(
     typeof value === 'string' ? [value, value.replace(/^#/, '')] : [],
   );
   for (const id of ids) {
-    if ($(`#${escapeSelectorValue(id)}`).length) return id;
+    try {
+      if ($(`#${escapeCssSelectorValue(id)}`).length) return id;
+    } catch {
+      // Malformed id from page content; skip this candidate id.
+    }
   }
   return null;
 }
@@ -316,8 +321,4 @@ function flattenInstructions(value: unknown): string[] {
       : flattenInstructions(item.itemListElement ?? item.steps);
   }
   return [];
-}
-
-function escapeSelectorValue(value: string): string {
-  return value.replace(/(["\\])/g, '\\$1');
 }

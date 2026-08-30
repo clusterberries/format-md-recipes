@@ -44,6 +44,12 @@ export function convertRecipeHtmlToMarkdown(
     replacement: () => '',
   });
 
+  // Prevent script/style/embed content from leaking into the output markdown.
+  turndown.addRule('ignoreNonContentElements', {
+    filter: ['script', 'style', 'noscript', 'iframe'],
+    replacement: () => '',
+  });
+
   // Convert links to plain text unless link preservation is explicitly enabled.
   turndown.addRule('recipeLinks', {
     filter: 'a',

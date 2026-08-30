@@ -16,6 +16,7 @@ import type {
   RecipeSchema,
 } from './types.ts';
 import type { RecipeImage } from './images-parser/types.ts';
+import { escapeCssSelectorValue } from './css-selector-utils.ts';
 
 const RECIPE_SIGNAL_PATTERN =
   /(?:\b(recipe|ingredients?|instructions?|directions?|method|preparation|steps?|how-to)\b|ингредиент\w*|приготовлени\w*|рецепт\w*|шаг(?:\s|$))/iu;
@@ -217,11 +218,7 @@ function extractRecipeFormValues($: cheerio.CheerioAPI): FormRecipeValue[] {
 
         const id = $control.attr('id');
         const label = id
-          ? $container
-              .find(`label[for="${escapeSelectorValue(id)}"]`)
-              .first()
-              .text()
-              .trim()
+          ? getLabelForId($container, id)
           : $control.closest('label').text().trim();
 
         values.push({
@@ -670,6 +667,18 @@ function isImageOnlyMarkup(value: string): boolean {
   );
 }
 
-function escapeSelectorValue(value: string): string {
-  return value.replace(/(["\\])/g, '\\$1');
+function getLabelForId(
+  $container: cheerio.Cheerio<Element>,
+  id: string,
+): string {
+  try {
+    return $container
+      .find(`label[for="${escapeCssSelectorValue(id)}"]`)
+      .first()
+      .text()
+      .trim();
+  } catch {
+    // Malformed id from page content; fall back to no label.
+    return '';
+  }
 }

@@ -132,14 +132,16 @@ function getAiReasons(
     reasons.push('recipe candidates have similar scores');
   }
   if (
-    recipe.ingredients.value.length < 2 &&
-    recipe.ingredients.alternatives.some((value) => value.length >= 2)
+    recipe.ingredients.alternatives.some(
+      (value) => value.length > recipe.ingredients.value.length,
+    )
   ) {
     reasons.push('selected ingredients may be incomplete');
   }
   if (
-    recipe.instructions.value.length < 2 &&
-    recipe.instructions.alternatives.some((value) => value.length >= 2)
+    recipe.instructions.alternatives.some(
+      (value) => value.length > recipe.instructions.value.length,
+    )
   ) {
     reasons.push('selected instructions may be incomplete');
   }

@@ -101,7 +101,14 @@ describe('format-url-content integration', () => {
     await execFileAsync(
       process.execPath,
       [cliPath, '-i', fixtureUrl, '--no-ai', ...extraArgs, '-o', outputPath],
-      { cwd: projectRoot },
+      {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          // Fixture server runs on 127.0.0.1; opt into the SSRF guard's local-host allowance for tests only.
+          FORMAT_URL_CONTENT_ALLOW_PRIVATE_HOSTS: '1',
+        },
+      },
     );
 
     const [actual, expected] = await Promise.all([

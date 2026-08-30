@@ -1,6 +1,7 @@
 import path from 'path';
 import { program } from 'commander';
 import type { CliOptions } from './types.ts';
+import { assertSafeUrl } from './url-guard.ts';
 
 interface CommanderOptions {
   input: string;
@@ -29,6 +30,12 @@ export function parseOptions(): CliOptions {
     .parse(process.argv);
 
   const options = program.opts<CommanderOptions>();
+
+  try {
+    assertSafeUrl(options.input);
+  } catch (error) {
+    program.error(error instanceof Error ? error.message : String(error));
+  }
 
   return {
     inputUrl: options.input,
