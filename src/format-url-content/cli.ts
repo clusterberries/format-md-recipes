@@ -2,6 +2,13 @@ import path from 'path';
 import { program } from 'commander';
 import type { CliOptions } from './types.ts';
 
+interface CommanderOptions {
+  input: string;
+  output?: string;
+  ai?: boolean;
+  mainImageOnly?: boolean;
+}
+
 export function parseOptions(): CliOptions {
   program
     .name('format-url-content')
@@ -21,7 +28,7 @@ export function parseOptions(): CliOptions {
     )
     .parse(process.argv);
 
-  const options = program.opts();
+  const options = program.opts<CommanderOptions>();
 
   return {
     inputUrl: options.input,

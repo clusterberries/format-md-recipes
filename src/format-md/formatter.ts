@@ -122,10 +122,11 @@ export async function runFormatter(options: CliOptions) {
       let written;
       try {
         written = await formatSingleFile(filePath, outputPath, dryRun);
-      } catch (error: any) {
-        throw new Error(`Error formatting ${filePath}: ${error.message}`, {
-          cause: error,
-        });
+      } catch (error) {
+        throw new Error(
+          `Error formatting ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error },
+        );
       }
 
       if (written) {
@@ -163,10 +164,11 @@ export async function runFormatter(options: CliOptions) {
     let written;
     try {
       written = await formatSingleFile(inputPath, outputPath, dryRun);
-    } catch (error: any) {
-      throw new Error(`Error formatting ${inputPath}: ${error.message}`, {
-        cause: error,
-      });
+    } catch (error) {
+      throw new Error(
+        `Error formatting ${inputPath}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
     }
 
     if (!dryRun) {

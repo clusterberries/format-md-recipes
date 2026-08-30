@@ -2,6 +2,15 @@ import path from 'path';
 import { program } from 'commander';
 import type { CliOptions } from './types.ts';
 
+interface CommanderOptions {
+  input: string;
+  output?: string;
+  dest?: string;
+  rewrite?: boolean;
+  formattedPrefix?: boolean;
+  dryRun?: boolean;
+}
+
 export function parseOptions(): CliOptions {
   program
     .name('format-md')
@@ -26,7 +35,7 @@ export function parseOptions(): CliOptions {
     .option('--dry-run', 'print output to stdout without writing a file')
     .parse(process.argv);
 
-  const options = program.opts();
+  const options = program.opts<CommanderOptions>();
 
   if (options.output && options.dest) {
     throw new Error('Cannot use both --output and --dest at the same time.');

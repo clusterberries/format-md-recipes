@@ -1,7 +1,11 @@
 import { FULL_MODEL, MINI_MODEL, MEDIUM_MODEL } from '../shared/constants.ts';
 import type { ClassificationResult, Complexity } from './types.ts';
 
-function extractJsonObject(text: string): ClassificationResult | null {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function extractJsonObject(text: string): Record<string, unknown> | null {
   const trimmed = text.trim();
   if (!trimmed) {
     return null;
@@ -15,10 +19,15 @@ function extractJsonObject(text: string): ClassificationResult | null {
   }
 
   try {
-    return JSON.parse(trimmed.slice(start, end + 1));
+    const parsed: unknown = JSON.parse(trimmed.slice(start, end + 1));
+    return isRecord(parsed) ? parsed : null;
   } catch {
     return null;
   }
+}
+
+function isComplexity(value: unknown): value is Complexity {
+  return value === 'simple' || value === 'moderate' || value === 'complex';
 }
 
 export function parseClassificationResult(
@@ -27,9 +36,14 @@ export function parseClassificationResult(
   const parsed = extractJsonObject(rawResult);
 
   return {
-    isRecipe: Boolean(parsed?.isRecipe),
-    complexity: parsed?.complexity || 'moderate',
-    reason: parsed?.reason || 'No reason provided',
+    isRecipe: typeof parsed?.isRecipe === 'boolean' ? parsed.isRecipe : false,
+    complexity: isComplexity(parsed?.complexity)
+      ? parsed.complexity
+      : 'moderate',
+    reason:
+      typeof parsed?.reason === 'string' && parsed.reason
+        ? parsed.reason
+        : 'No reason provided',
   };
 }
 
