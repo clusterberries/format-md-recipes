@@ -4,6 +4,7 @@ import type {
   ReconciledRecipe,
 } from './types.ts';
 import { convertRecipeHtmlToMarkdown } from './markdown-converter.ts';
+import { getDefaultImageAlt, getLanguage, type Language } from './language.ts';
 
 export type RecipeMarkdownOptions = {
   imagePosition?: 'top' | 'bottom';
@@ -20,11 +21,7 @@ export function renderRecipeMarkdown(
   const sections: string[] = [];
   const title = recipe.title.value ?? 'Recipe';
   const mainImage = recipe.mainImage
-    ? renderImage(
-        recipe.mainImage,
-        language === 'ru' ? 'Изображение рецепта' : 'Recipe image',
-        language,
-      )
+    ? renderImage(recipe.mainImage, getDefaultImageAlt(language), language)
     : '';
 
   sections.push(`# ${escapeHeading(title)}`);
@@ -78,11 +75,7 @@ function formatMetadataLine(label: string, value: string | null): string {
   return value ? `- ${label}: ${escapeListText(value)}` : '';
 }
 
-export function getLanguage(language: string | null): 'ru' | 'en' {
-  return language?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
-}
-
-function getMetadataLabels(language: 'ru' | 'en'): {
+function getMetadataLabels(language: Language): {
   servings: string;
   preparationTime: string;
   cookingTime: string;
@@ -124,7 +117,7 @@ function renderIngredients(ingredients: ExtractedIngredient[]): string {
 
 function renderInstructions(
   instructions: ReconciledRecipe['instructions']['value'],
-  language: 'ru' | 'en' = 'en',
+  language: Language = 'en',
   includeStepImages = true,
 ): string {
   if (!instructions.length) return '';
@@ -150,10 +143,9 @@ function renderInstructions(
 export function renderImage(
   image: ExtractedImage,
   fallbackAlt: string,
-  language: 'ru' | 'en' = 'en',
+  language: Language = 'en',
 ): string {
-  const actualFallback =
-    language === 'ru' ? 'Изображение рецепта' : 'Recipe image';
+  const actualFallback = getDefaultImageAlt(language);
   let altSource =
     image.role === 'main'
       ? fallbackAlt || actualFallback
@@ -173,15 +165,13 @@ export function renderImage(
 }
 
 function escapeHeading(value: string): string {
-  return value
-    .replace(/\r?\n/g, ' ')
-    .replace(/^#+\s*/, '')
-    .trim();
+  return stripLeadingMarker(value, /^#+\s*/);
 }
 
 function escapeListText(value: string): string {
-  return value
-    .replace(/\r?\n/g, ' ')
-    .replace(/^\s*[-*+]\s+/, '')
-    .trim();
+  return stripLeadingMarker(value, /^\s*[-*+]\s+/);
+}
+
+function stripLeadingMarker(value: string, leadingMarker: RegExp): string {
+  return value.replace(/\r?\n/g, ' ').replace(leadingMarker, '').trim();
 }

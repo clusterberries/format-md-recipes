@@ -13,7 +13,11 @@ import {
   RECIPE_COMPONENT_SELECTOR,
   RECIPE_PROTECTION_SELECTOR,
 } from './constants.ts';
-import { getFingerprint, getLinkDensity, normalizeText } from './utils.ts';
+import {
+  getElementFingerprint,
+  getLinkDensity,
+  normalizeText,
+} from '../utils.ts';
 import type { CleanupMode } from './types.ts';
 
 const NAMED_NOISE_ATTRIBUTE_SELECTOR =
@@ -71,7 +75,7 @@ export function removeNamedNoise(
       return;
     }
 
-    const fingerprint = getFingerprint($, el);
+    const fingerprint = getElementFingerprint($, el);
 
     if (pattern.test(fingerprint)) {
       $element.remove();
@@ -101,7 +105,7 @@ export function removeNoiseByText(
       return;
     }
 
-    const hasHighLinkDensity = getLinkDensity($, $element) > HIGH_LINK_DENSITY;
+    const hasHighLinkDensity = getLinkDensity($, el) > HIGH_LINK_DENSITY;
     const hasRecipeOnlyNoiseText = RECIPE_ONLY_BLOCK_TEXT_PATTERN.test(text);
 
     if (

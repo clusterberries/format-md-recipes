@@ -53,10 +53,6 @@ export function parseDimension(value?: string): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-export function normalizeText(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -1,6 +1,7 @@
 import type {
   ExtractRecipeImagesResult,
   ImageSource,
+  RecipeSchema,
 } from './images-parser/types.ts';
 
 export interface CliOptions {
@@ -15,10 +16,6 @@ export interface ParsedArticle {
   excerpt: string | null;
   contentHtml: string;
   length: number;
-}
-
-export interface RecipeSchema {
-  [key: string]: unknown;
 }
 
 export interface ParsedRecipePage {

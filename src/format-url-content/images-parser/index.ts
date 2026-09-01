@@ -3,7 +3,7 @@ import {
   extractSchemaMainImages,
   extractSchemaStepImages,
 } from './extract-schema-images.ts';
-import { extractHtmlImages } from './extract-html-images.ts';
+import { extractHtmlImages } from './html-images/index.ts';
 import { buildRecipeImagesResult } from './build-images-result.ts';
 import type { ExtractRecipeImagesResult, RecipeSchema } from './types.ts';
 

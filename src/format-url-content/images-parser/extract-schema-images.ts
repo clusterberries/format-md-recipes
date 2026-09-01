@@ -1,5 +1,6 @@
 import type { RecipeImage, RecipeSchema, StepImage } from './types.ts';
 import { isRecord, isUsableImageUrl, normalizeUrl } from './utils.ts';
+import { MAX_SCHEMA_RECURSION_DEPTH } from '../utils.ts';
 
 export function extractSchemaMainImages(
   schema: RecipeSchema,
@@ -44,7 +45,11 @@ export function extractSchemaStepImages(
   return [...uniqueImages.values()];
 }
 
-function flattenSchemaInstructions(value: unknown): RecipeSchema[] {
+function flattenSchemaInstructions(value: unknown, depth = 0): RecipeSchema[] {
+  if (depth > MAX_SCHEMA_RECURSION_DEPTH) {
+    return [];
+  }
+
   if (!value) {
     return [];
   }
@@ -54,7 +59,7 @@ function flattenSchemaInstructions(value: unknown): RecipeSchema[] {
   }
 
   if (Array.isArray(value)) {
-    return value.flatMap((item) => flattenSchemaInstructions(item));
+    return value.flatMap((item) => flattenSchemaInstructions(item, depth + 1));
   }
 
   if (!isRecord(value)) {
@@ -69,6 +74,7 @@ function flattenSchemaInstructions(value: unknown): RecipeSchema[] {
         value.recipeInstructions ??
         value.steps ??
         value.itemList,
+      depth + 1,
     );
   }
 

@@ -1,0 +1,2 @@
+export const SIMILAR_CANDIDATE_SCORE_GAP = 12;
+export const MAX_AI_INPUT_LENGTH = 12_000;

@@ -5,11 +5,11 @@ import { parseRecipePage } from './page-parser.ts';
 import { cleanRecipeContent } from './html-cleaner/index.ts';
 import { convertRecipeHtmlToMarkdown } from './markdown-converter.ts';
 import {
-  getLanguage,
   renderImage,
   renderRecipeMarkdown,
 } from './recipe-markdown-renderer.ts';
-import { resolveRecipeConflicts } from './ai-conflict-resolver.ts';
+import { getDefaultImageAlt, getLanguage } from './language.ts';
+import { resolveRecipeConflicts } from './ai-conflict-resolver/index.ts';
 
 export async function runUrlContentFormatter(options: CliOptions) {
   const { inputUrl, output } = options;
@@ -126,11 +126,7 @@ function buildFallbackMarkdown(
 
   const language = getLanguage(recipe.sourceMetadata.language);
   const mainImage = recipe.mainImage
-    ? renderImage(
-        recipe.mainImage,
-        language === 'ru' ? 'Изображение рецепта' : 'Recipe image',
-        language,
-      )
+    ? renderImage(recipe.mainImage, getDefaultImageAlt(language), language)
     : '';
   const body = cleanedHtml ? convertRecipeHtmlToMarkdown(cleanedHtml) : '';
 

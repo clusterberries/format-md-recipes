@@ -9,6 +9,7 @@ import type {
   ReconciledField,
   ReconciledRecipe,
 } from './types.ts';
+import { normalizeText } from './utils.ts';
 
 const SOURCE_PRIORITY: Record<ExtractedField<unknown>['source'], number> = {
   'json-ld': 5,
@@ -284,7 +285,7 @@ function averageConfidence<T extends { confidence: number }>(
 }
 
 function normalize(value: string): string {
-  return value.replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+  return normalizeText(value).toLocaleLowerCase();
 }
 
 function normalizeIngredient(value: string): string {
