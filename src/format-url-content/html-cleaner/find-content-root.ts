@@ -12,7 +12,7 @@ import {
   RECIPE_SIGNAL_TEXT_LENGTH,
   RECIPE_SIGNAL_PATTERN,
 } from './constants.ts';
-import { getElementFingerprint, normalizeText } from '../utils.ts';
+import { getElementFingerprint, normalizeText } from '../utils/dom-helpers.ts';
 
 const ROOT_CANDIDATE_ATTRIBUTE_SELECTOR =
   '[id], [class], [data-testid], [data-test]';

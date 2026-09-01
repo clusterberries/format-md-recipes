@@ -3,7 +3,10 @@ import type {
   ExtractedPageSources,
   FieldSource,
 } from '../types.ts';
-import { MAX_SCHEMA_RECURSION_DEPTH, normalizeText } from '../utils.ts';
+import {
+  MAX_SCHEMA_RECURSION_DEPTH,
+  normalizeText,
+} from '../utils/dom-helpers.ts';
 import { SOURCE_CONFIDENCE } from './constants.ts';
 
 export function extractInstructions(

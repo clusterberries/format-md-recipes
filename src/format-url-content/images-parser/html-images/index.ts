@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { HtmlImageCandidate } from '../types.ts';
 import { parseDimension } from '../utils.ts';
-import { normalizeText } from '../../utils.ts';
+import { normalizeText } from '../../utils/dom-helpers.ts';
 import { extractHtmlImageUrl } from './url-extractor.ts';
 import {
   findStepContainers,

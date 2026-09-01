@@ -17,7 +17,7 @@ import {
   getElementFingerprint,
   getLinkDensity,
   normalizeText,
-} from '../utils.ts';
+} from '../utils/dom-helpers.ts';
 import type { CleanupMode } from './types.ts';
 
 const NAMED_NOISE_ATTRIBUTE_SELECTOR =

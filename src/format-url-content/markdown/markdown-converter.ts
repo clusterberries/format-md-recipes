@@ -1,6 +1,6 @@
 import TurndownService from 'turndown';
 import { tables } from '@truto/turndown-plugin-gfm';
-import type { RecipeImage } from './images-parser/types.ts';
+import type { RecipeImage } from '../images-parser/types.ts';
 
 export type MarkdownImagePosition = 'top' | 'bottom';
 

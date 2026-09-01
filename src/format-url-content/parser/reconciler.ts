@@ -8,8 +8,8 @@ import type {
   ReconciledCollection,
   ReconciledField,
   ReconciledRecipe,
-} from './types.ts';
-import { normalizeText } from './utils.ts';
+} from '../types.ts';
+import { normalizeText } from '../utils/dom-helpers.ts';
 
 const SOURCE_PRIORITY: Record<ExtractedField<unknown>['source'], number> = {
   'json-ld': 5,

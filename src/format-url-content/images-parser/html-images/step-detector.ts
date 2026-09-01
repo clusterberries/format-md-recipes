@@ -1,6 +1,6 @@
 import type * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
-import { getElementFingerprint } from '../../utils.ts';
+import { getElementFingerprint } from '../../utils/dom-helpers.ts';
 
 const STEP_PATTERN =
   /\b(step|instruction|direction|method|preparation|howto|how-to|process|этап|шаг|инструкц|приготовлен)\b/i;

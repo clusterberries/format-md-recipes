@@ -1,7 +1,7 @@
 import type * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
 import type { FormRecipeValue } from '../types.ts';
-import { escapeCssSelectorValue } from '../utils.ts';
+import { escapeCssSelectorValue } from '../utils/dom-helpers.ts';
 import { getFingerprint } from './extraction-helpers.ts';
 
 const FORM_SIGNAL_PATTERN =

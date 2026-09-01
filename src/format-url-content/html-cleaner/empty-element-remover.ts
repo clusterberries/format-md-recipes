@@ -1,7 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { Element } from 'domhandler';
 import { CLEANUP_PASSES, REMOVABLE_EMPTY_SELECTOR } from './constants.ts';
-import { normalizeText } from '../utils.ts';
+import { normalizeText } from '../utils/dom-helpers.ts';
 import { shouldProtectRecipeElement } from './noise-remover.ts';
 
 const RETAINED_MEDIA_SELECTOR = 'img, picture, video, audio, source';

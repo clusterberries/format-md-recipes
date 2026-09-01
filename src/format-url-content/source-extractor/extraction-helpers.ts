@@ -1,7 +1,7 @@
 import type * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
 import type { RecipeContentCandidate } from '../types.ts';
-import { normalizeText } from '../utils.ts';
+import { normalizeText } from '../utils/dom-helpers.ts';
 
 export function extractElementValue(
   $element: cheerio.Cheerio<Element>,

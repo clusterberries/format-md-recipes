@@ -3,7 +3,7 @@ import type {
   ExtractedPageSources,
   FieldSource,
 } from '../types.ts';
-import { normalizeText } from '../utils.ts';
+import { normalizeText } from '../utils/dom-helpers.ts';
 import { SOURCE_CONFIDENCE } from './constants.ts';
 
 export function extractIngredients(

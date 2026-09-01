@@ -1,7 +1,7 @@
 import type * as cheerio from 'cheerio';
 import { Element } from 'domhandler';
 import { hasNoise, isUsableImageUrl, parseDimension } from '../utils.ts';
-import { getElementFingerprint } from '../../utils.ts';
+import { getElementFingerprint } from '../../utils/dom-helpers.ts';
 
 export function getImageFingerprint(
   $: cheerio.CheerioAPI,

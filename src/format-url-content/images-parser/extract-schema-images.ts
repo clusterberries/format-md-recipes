@@ -1,6 +1,6 @@
 import type { RecipeImage, RecipeSchema, StepImage } from './types.ts';
 import { isRecord, isUsableImageUrl, normalizeUrl } from './utils.ts';
-import { MAX_SCHEMA_RECURSION_DEPTH } from '../utils.ts';
+import { MAX_SCHEMA_RECURSION_DEPTH } from '../utils/dom-helpers.ts';
 
 export function extractSchemaMainImages(
   schema: RecipeSchema,

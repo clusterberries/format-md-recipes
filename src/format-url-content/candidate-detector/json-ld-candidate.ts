@@ -4,7 +4,7 @@ import type { RecipeSchema } from '../images-parser/types.ts';
 import {
   escapeCssSelectorValue,
   MAX_SCHEMA_RECURSION_DEPTH,
-} from '../utils.ts';
+} from '../utils/dom-helpers.ts';
 import { createSignals, buildCandidate } from './signals.ts';
 import { toString, toStringArray } from './helpers.ts';
 

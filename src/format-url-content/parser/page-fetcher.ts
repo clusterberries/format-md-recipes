@@ -1,13 +1,5 @@
-import { JSDOM } from 'jsdom';
-import { Readability } from '@mozilla/readability';
-import iconv from 'iconv-lite';
-import sniffHTMLEncoding from 'html-encoding-sniffer';
-import { extractIndependentSources } from './source-extractor/index.ts';
-import { extractNormalizedRecipe } from './field-extractor/index.ts';
-import { reconcileRecipe } from './reconciler.ts';
-import { logInfo, logWarning } from '../shared/utils.ts';
-import { assertSafeUrl } from './url-guard.ts';
-import type { PageMetadata, ParsedRecipePage } from './types.ts';
+import { logWarning } from '../../shared/utils.ts';
+import { assertSafeUrl } from '../utils/url-guard.ts';
 
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
@@ -17,83 +9,7 @@ const MAX_REDIRECTS = 5;
 
 class RetryableFetchError extends Error {}
 
-export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
-  logInfo(`Fetching page: ${url}`);
-  const { response, buffer, contentType } = await fetchPageWithRetry(url);
-  logInfo(
-    `Page fetched (${buffer.byteLength} bytes, content-type: ${contentType ?? 'unknown'})`,
-  );
-
-  const encoding = sniffHTMLEncoding(buffer, {
-    transportLayerEncodingLabel: contentType ?? undefined,
-    defaultEncoding: 'windows-1252',
-  });
-
-  const html = iconv.decode(buffer, encoding);
-  const finalUrl = response.url || url;
-  const dom = new JSDOM(html, { url: finalUrl });
-
-  const metadata = extractPageMetadata(
-    dom.window.document,
-    finalUrl,
-    encoding,
-    contentType,
-  );
-  logInfo(
-    `Detected encoding: ${encoding}, language: ${metadata.language ?? 'unknown'}`,
-  );
-
-  // Extract main article
-  const article = new Readability(dom.window.document).parse();
-  const parsedArticle = article
-    ? {
-        title: article.title ?? null,
-        excerpt: article.excerpt ?? null,
-        contentHtml: article.content ?? '',
-        length: article.length ?? 0,
-      }
-    : null;
-  const sources = extractIndependentSources(
-    html,
-    finalUrl,
-    metadata,
-    parsedArticle,
-  );
-  logInfo(
-    `Extracted ${sources.candidates.length} recipe candidate(s) ` +
-      `(json-ld: ${sources.jsonLd.length}, main image: ${
-        sources.images.mainImage ? 'yes' : 'no'
-      }, step images: ${sources.images.stepImages.length})`,
-  );
-  const normalizedRecipe = extractNormalizedRecipe(sources, {
-    requestedUrl: url,
-    finalUrl,
-    canonicalUrl: metadata.canonicalUrl,
-    language: metadata.language,
-    encoding,
-    contentType,
-  });
-  const reconciledRecipe = reconcileRecipe(normalizedRecipe);
-  logInfo(
-    `Reconciled recipe: ${reconciledRecipe.ingredients.value.length} ingredient(s), ` +
-      `${reconciledRecipe.instructions.value.length} instruction(s), ` +
-      `${reconciledRecipe.conflicts.length} conflict(s) detected`,
-  );
-
-  return {
-    url,
-    finalUrl,
-    rawHtml: html,
-    metadata,
-    article: parsedArticle,
-    recipe: sources.jsonLd[0] ?? null,
-    sources,
-    normalizedRecipe,
-    reconciledRecipe,
-  };
-}
-
-async function fetchPageWithRetry(url: string): Promise<{
+export async function fetchPageWithRetry(url: string): Promise<{
   response: Response;
   buffer: Buffer;
   contentType: string | null;
@@ -188,7 +104,6 @@ async function fetchFollowingRedirects(
     try {
       response = await fetch(currentUrl, {
         headers: {
-          // Some sites reject requests without a browser-like UA.
           'User-Agent':
             'Mozilla/5.0 (compatible; RecipeParser/1.0; +https://example.com)',
         },
@@ -214,7 +129,6 @@ async function fetchFollowingRedirects(
       );
     }
 
-    // Re-validate every hop so a redirect can't be used to reach a private/local address.
     currentUrl = assertSafeUrl(new URL(location, currentUrl).href).href;
   }
 
@@ -293,62 +207,4 @@ async function readResponseBuffer(response: Response): Promise<Buffer> {
   }
 
   return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
-}
-
-function extractPageMetadata(
-  doc: Document,
-  baseUrl: string,
-  encoding: string,
-  contentType: string | null,
-): PageMetadata {
-  const getMetaContent = (selector: string): string | null =>
-    doc.querySelector(selector)?.getAttribute('content')?.trim() || null;
-
-  const language =
-    doc.documentElement.getAttribute('lang')?.trim() ||
-    getMetaContent('meta[http-equiv="content-language"]') ||
-    getMetaContent('meta[property="og:locale"]') ||
-    getMetaContent('meta[name="language"]') ||
-    null;
-
-  const canonical = doc
-    .querySelector('link[rel="canonical"]')
-    ?.getAttribute('href');
-
-  return {
-    contentType,
-    encoding,
-    title:
-      getMetaContent('meta[property="og:title"]') ??
-      doc.querySelector('title')?.textContent?.trim() ??
-      null,
-    description:
-      getMetaContent('meta[name="description"]') ??
-      getMetaContent('meta[property="og:description"]'),
-    canonicalUrl: normalizeMetadataUrl(canonical, baseUrl),
-    language,
-    openGraphImage: (() => {
-      const image = getMetaContent('meta[property="og:image"]');
-      return normalizeMetadataUrl(image, baseUrl);
-    })(),
-    twitterImage: (() => {
-      const image =
-        getMetaContent('meta[name="twitter:image"]') ??
-        getMetaContent('meta[property="twitter:image"]');
-      return normalizeMetadataUrl(image, baseUrl);
-    })(),
-  };
-}
-
-function normalizeMetadataUrl(
-  value: string | null | undefined,
-  baseUrl: string,
-): string | null {
-  if (!value) return null;
-
-  try {
-    return new URL(value, baseUrl).href;
-  } catch {
-    return null;
-  }
 }

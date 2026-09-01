@@ -1,7 +1,7 @@
 import type * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
 import type { RecipeCandidate, RecipeContentCandidate } from '../types.ts';
-import { getLinkDensity } from '../utils.ts';
+import { getLinkDensity } from '../utils/dom-helpers.ts';
 import { NOISE_PATTERN, TIME_PATTERN } from './patterns.ts';
 import { createSignals, buildCandidate } from './signals.ts';
 

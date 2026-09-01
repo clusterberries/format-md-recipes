@@ -1,7 +1,7 @@
 import path from 'path';
 import { program } from 'commander';
 import type { CliOptions } from './types.ts';
-import { assertSafeUrl } from './url-guard.ts';
+import { assertSafeUrl } from './utils/url-guard.ts';
 
 interface CommanderOptions {
   input: string;

@@ -2,7 +2,7 @@ import type {
   ExtractedImage,
   ExtractedIngredient,
   ReconciledRecipe,
-} from './types.ts';
+} from '../types.ts';
 import { convertRecipeHtmlToMarkdown } from './markdown-converter.ts';
 import { getDefaultImageAlt, getLanguage, type Language } from './language.ts';
 
