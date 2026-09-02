@@ -21,69 +21,56 @@ OPENAI_MODEL_FULL=gpt-5.5
 npm install
 ```
 
-## Format MD - Usage
+## Format MD
+
+Format Markdown files or directories with OpenAI:
 
 ```bash
 npm run format -- -i <input> [options]
 ```
 
-### Commands and options
+- `-i, --input <path>` — Input file or directory.
+- `-o, --output <file>` — Write one result to a file.
+- `-d, --dest <folder>` — Write results to a destination folder.
+- `--rewrite` — Replace the original file or files.
+- `--formatted-prefix` — Create `formatted-` files alongside the originals.
+- `--dry-run` — Print the formatted result without writing a file.
 
-#### Required
+Use only one output mode: `--output`, `--dest`, `--rewrite`, or `--formatted-prefix`.
 
-- `-i, --input <path>` — Path to the input Markdown file or directory.
-
-#### Output options
-
-- `-o, --output <path>` — Write the result to a specific output file. If omitted for a single file, output can be printed to stdout.
-- `-d, --dest <path>` — Write processed files to a destination directory. Useful when the input is a folder and you want to preserve file names and relative paths.
-
-#### Write mode options
-
-- `--rewrite` — Rewrite the original file or files in place.
-- `--formatted-prefix` — Create new formatted files in the same folder using the `formatted-` prefix.
-
-#### Preview option
-
-- `--dry-run` — Calls the model only to determine how the file should be handled, but does not call the main processing model, does not process the file itself, and does not write anything anywhere.
-
-### Option rules
-
-- `--output` and `--dest` cannot be used together.
-- `--rewrite` cannot be used with `--output` or `--dest`.
-- `--formatted-prefix` cannot be used with `--output`, `--dest`, or `--rewrite`.
-
-### Examples
-
-Rewrite the original file in place:
+Examples:
 
 ```bash
 npm run format -- -i recipes/source.md --rewrite
-```
-
-Create a new file in the same folder with the `formatted-` prefix:
-
-```bash
 npm run format -- -i recipes/source.md --formatted-prefix
-```
-
-Process all Markdown files in a folder and write them to another folder:
-
-```bash
 npm run format -- -i recipes/source-folder -d recipes/formatted-folder
+npm run format -- -i recipes/source-folder --dest recipes/formatted-folder
 ```
 
-Run a preview without processing the file or writing output:
+## Format URL Content
+
+Fetch a recipe page and convert its content to Markdown:
 
 ```bash
-npm run format -- -i recipes/source.md --dry-run
+npm run format-url-content -- -i <url> [options]
 ```
 
-## Format list - Usage
+- `-i, --input <url>` — Recipe page URL to fetch and format.
+- `-o, --output <file>` — Write Markdown to a file; otherwise print it to stdout.
+- `--no-ai` — Disable AI conflict resolution when extracted fields disagree.
+- `--main-image-only` — Include only the main image, placed at the end of the recipe.
 
-This is a script to format text files with lists in a specific format.
+Example:
 
+```bash
+npm run format-url-content -- -i https://example.com/recipe --output recipe.md
 ```
+
+## Format list
+
+Format a text file containing a list.
+
+```bash
 npm run format-list -- -i <input> [options]
 ```
 
