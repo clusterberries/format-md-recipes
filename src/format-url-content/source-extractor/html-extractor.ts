@@ -49,6 +49,17 @@ export function extractRecipeHtmlCandidates(
       INSTRUCTION_PATTERN,
     );
 
+    const instructionValues = extractListValues($, instructionContainer);
+    const rawIngredientValues = extractListValues($, ingredientContainer);
+    // Drop any "ingredient" that's actually a duplicated instruction step (e.g.
+    // the ingredient container falsely resolved to overlap with instructions).
+    const instructionTextSet = new Set(
+      instructionValues.map((value) => value.trim().toLocaleLowerCase()),
+    );
+    const ingredientValues = rawIngredientValues.filter(
+      (value) => !instructionTextSet.has(value.trim().toLocaleLowerCase()),
+    );
+
     const candidate: RecipeContentCandidate = {
       source: 'html',
       location: `recipe-html-${index}`,
@@ -56,10 +67,10 @@ export function extractRecipeHtmlCandidates(
       description:
         extractHtmlDescription($, $('.entry-content').first()) ??
         extractHtmlDescription($, $root),
-      ingredients: extractListValues($, ingredientContainer).length
-        ? extractListValues($, ingredientContainer)
+      ingredients: ingredientValues.length
+        ? ingredientValues
         : extractListValues($, $('.ingredients').first()),
-      instructions: extractListValues($, instructionContainer),
+      instructions: instructionValues,
       ...extractHtmlRecipeMeta($, $root),
     };
 

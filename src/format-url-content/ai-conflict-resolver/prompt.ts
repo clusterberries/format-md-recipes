@@ -11,8 +11,8 @@ Return only valid JSON (no markdown fences, no commentary) matching exactly this
 {
   "fields": {
     "<scalarFieldName>": { "action": "select" | "keep-deterministic" | "unresolved", "candidateIndex"?: number },
-    "ingredients": { "action": "select" | "merge" | "keep-deterministic" | "unresolved", "candidateIndexes"?: number[] },
-    "instructions": { "action": "select" | "merge" | "keep-deterministic" | "unresolved", "candidateIndexes"?: number[] }
+    "ingredients": { "action": "select" | "merge" | "filter" | "keep-deterministic" | "unresolved", "candidateIndexes"?: number[], "dropTexts"?: string[] },
+    "instructions": { "action": "select" | "merge" | "filter" | "keep-deterministic" | "unresolved", "candidateIndexes"?: number[], "dropTexts"?: string[] }
   },
   "unresolved"?: string[]
 }
@@ -21,5 +21,7 @@ Rules:
 - Only include a field in "fields" if you are changing it away from "keep-deterministic".
 - "select" for a scalar requires "candidateIndex" pointing at the chosen entry (0 = selected, 1+ = alternatives).
 - "select" or "merge" for a collection requires "candidateIndexes" (one or more indexes into [selected, ...alternatives]); "merge" combines the referenced groups.
+- Ingredient items are short phrases (quantity + unit + name); instruction items are individual action steps. If the "selected" array for "ingredients" or "instructions" contains items that don't belong (e.g. a full instruction sentence mixed into ingredients, an ingredient fragment mixed into instructions, or unrelated noise like ads, navigation text, or comments), use "filter" with "dropTexts" listing their exact "text" values (copied verbatim) to remove them, instead of leaving them mixed in.
+- "filter" always applies to the "selected" array (index 0), not to alternatives.
 - Use "unresolved" when no candidate can be confidently chosen, and optionally list the field name in the top-level "unresolved" array.
 - Never invent recipe data that is not present in the provided candidates.`;

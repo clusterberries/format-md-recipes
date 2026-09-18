@@ -120,11 +120,26 @@ function mergeStepImages(params: {
     }
   }
 
-  return [...bestImageByStep.values()].sort((a, b) => {
-    if (a.stepIndex !== b.stepIndex) {
-      return a.stepIndex - b.stepIndex;
-    }
+  return dropImagesRepeatedAcrossSteps([...bestImageByStep.values()]).sort(
+    (a, b) => {
+      if (a.stepIndex !== b.stepIndex) {
+        return a.stepIndex - b.stepIndex;
+      }
 
-    return b.score - a.score;
-  });
+      return b.score - a.score;
+    },
+  );
+}
+
+// A URL assigned to more than one step is a reused placeholder, not a real
+// per-step photo (e.g. sites that repeat one generic image across every step).
+function dropImagesRepeatedAcrossSteps(images: StepImage[]): StepImage[] {
+  const stepsByUrl = new Map<string, Set<number>>();
+  for (const image of images) {
+    const steps = stepsByUrl.get(image.url) ?? new Set<number>();
+    steps.add(image.stepIndex);
+    stepsByUrl.set(image.url, steps);
+  }
+
+  return images.filter((image) => (stepsByUrl.get(image.url)?.size ?? 0) <= 1);
 }

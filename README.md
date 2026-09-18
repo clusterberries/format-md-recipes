@@ -74,6 +74,10 @@ Format a text file containing a list.
 npm run format-list -- -i <input> [options]
 ```
 
-### Options
-
 - `--dry-run` — prints the result to stdout without writing to a file.
+
+Example:
+
+```bash
+npm run format-list -- -i list.txt
+```

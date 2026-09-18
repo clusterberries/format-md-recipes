@@ -20,8 +20,10 @@ export interface AiFieldDecision {
 }
 
 export interface AiCollectionDecision {
-  action: 'select' | 'merge' | 'keep-deterministic' | 'unresolved';
+  action: 'select' | 'merge' | 'filter' | 'keep-deterministic' | 'unresolved';
   candidateIndexes?: number[];
+  // Exact `text` values (verbatim from the "selected" array) to remove; used with action "filter".
+  dropTexts?: string[];
 }
 
 export interface AiResolutionResult {

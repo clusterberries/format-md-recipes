@@ -35,5 +35,18 @@ export function getAiReasons(
   ) {
     reasons.push('recipe collections disagree');
   }
+  if (
+    recipe.ingredients.value.some((ingredient) =>
+      looksLikeInstructionText(ingredient.text),
+    )
+  ) {
+    reasons.push('ingredients may contain instruction-like text');
+  }
   return [...new Set(reasons)];
+}
+
+// Heuristic: real ingredient entries are short phrases, not full sentences describing an action.
+function looksLikeInstructionText(text: string): boolean {
+  const trimmed = text.trim();
+  return trimmed.split(/\s+/).length > 12 && /[.!?]/.test(trimmed);
 }

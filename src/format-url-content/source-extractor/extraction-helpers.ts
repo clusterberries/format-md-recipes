@@ -76,6 +76,8 @@ export function getFingerprint(
   element: Element,
 ): string {
   const $element = $(element);
+  // Normalize "_"/"-" to spaces so word-boundary patterns match compound
+  // class/id names like "recipe_span" or "step_n".
   return [
     $element.attr('id'),
     $element.attr('class'),
@@ -85,5 +87,6 @@ export function getFingerprint(
     $element.attr('aria-label'),
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(' ')
+    .replace(/[_-]/g, ' ');
 }

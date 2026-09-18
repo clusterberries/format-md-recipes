@@ -48,12 +48,19 @@ function validateDecision(decision: AiDecision): boolean {
 
 function validateCollectionDecision(decision: AiCollectionDecision): boolean {
   if (!isAllowedAction(decision.action)) return false;
-  return decision.action === 'select' || decision.action === 'merge'
-    ? Boolean(
-        decision.candidateIndexes?.length &&
-        decision.candidateIndexes.every(isValidIndex),
-      )
-    : true;
+  if (decision.action === 'select' || decision.action === 'merge')
+    return Boolean(
+      decision.candidateIndexes?.length &&
+      decision.candidateIndexes.every(isValidIndex),
+    );
+  if (decision.action === 'filter')
+    return Boolean(
+      decision.dropTexts?.length &&
+      decision.dropTexts.every(
+        (text) => typeof text === 'string' && text.trim().length > 0,
+      ),
+    );
+  return true;
 }
 
 function isAllowedAction(
@@ -62,6 +69,7 @@ function isAllowedAction(
   return (
     value === 'select' ||
     value === 'merge' ||
+    value === 'filter' ||
     value === 'keep-deterministic' ||
     value === 'unresolved'
   );

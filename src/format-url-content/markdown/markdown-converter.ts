@@ -1,5 +1,4 @@
 import TurndownService from 'turndown';
-import { tables } from '@truto/turndown-plugin-gfm';
 import type { RecipeImage } from '../images-parser/types.ts';
 
 export type MarkdownImagePosition = 'top' | 'bottom';
@@ -34,8 +33,6 @@ export function convertRecipeHtmlToMarkdown(
     strongDelimiter: '**',
     linkStyle: 'inlined',
   });
-
-  turndown.use(tables);
 
   // Remove all images from the HTML.
   // The selected main image is added separately after conversion.

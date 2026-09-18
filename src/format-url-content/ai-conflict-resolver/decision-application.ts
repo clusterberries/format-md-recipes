@@ -74,13 +74,17 @@ function applyCollectionDecision(
   fieldName: 'ingredients' | 'instructions',
   decision: AiCollectionDecision | undefined,
 ): ReconciledRecipe {
+  if (!decision) return recipe;
+  const collection = recipe[fieldName];
+
+  if (decision.action === 'filter')
+    return applyFilterDecision(recipe, fieldName, collection, decision);
+
   if (
-    !decision ||
     (decision.action !== 'select' && decision.action !== 'merge') ||
     !decision.candidateIndexes
   )
     return recipe;
-  const collection = recipe[fieldName];
   const candidates = [collection.value, ...collection.alternatives];
   const selectedGroups = decision.candidateIndexes
     .map((index) => candidates[index])
@@ -103,6 +107,35 @@ function applyCollectionDecision(
       confidence: averageCollectionConfidence(value),
       selectionReason:
         decision.action === 'merge' ? 'ai-merged' : 'ai-selected',
+    },
+  };
+}
+
+function applyFilterDecision<
+  T extends ExtractedIngredient | ExtractedInstruction,
+>(
+  recipe: ReconciledRecipe,
+  fieldName: 'ingredients' | 'instructions',
+  collection: ReconciledRecipe[typeof fieldName],
+  decision: AiCollectionDecision,
+): ReconciledRecipe {
+  if (!decision.dropTexts?.length) return recipe;
+  const dropSet = new Set(
+    decision.dropTexts.map((text) => text.trim().toLocaleLowerCase()),
+  );
+  const value = (collection.value as T[]).filter(
+    (item) => !dropSet.has(item.text.trim().toLocaleLowerCase()),
+  );
+  // Never let a bad AI response wipe out the whole collection.
+  if (!value.length) return recipe;
+  return {
+    ...recipe,
+    [fieldName]: {
+      ...collection,
+      value,
+      source: value[0]?.source ?? collection.source,
+      confidence: averageCollectionConfidence(value),
+      selectionReason: 'ai-filtered',
     },
   };
 }

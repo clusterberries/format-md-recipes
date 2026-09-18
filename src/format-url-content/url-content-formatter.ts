@@ -53,9 +53,27 @@ async function resolveConflicts(
     };
   }
 
+  if (!isRecipeIdentified(content.reconciledRecipe)) {
+    logInfo(
+      'Could not identify recipe (missing ingredients/instructions). Skipping AI conflict resolution.',
+    );
+    return {
+      recipe: content.reconciledRecipe,
+      called: false,
+      applied: false,
+      reasons: [],
+    };
+  }
+
   return resolveRecipeConflicts(
     content.reconciledRecipe,
     content.sources.candidates,
+  );
+}
+
+function isRecipeIdentified(recipe: ReconciledRecipe): boolean {
+  return (
+    recipe.ingredients.value.length > 0 && recipe.instructions.value.length > 0
   );
 }
 
@@ -65,8 +83,7 @@ function generateMarkdown(
   mainImageOnly: boolean,
 ): string {
   const originalContentHtml = content.article?.contentHtml?.trim() ?? '';
-  const recipeIdentified =
-    recipe.ingredients.value.length > 0 && recipe.instructions.value.length > 0;
+  const recipeIdentified = isRecipeIdentified(recipe);
   const imagePosition = mainImageOnly ? 'bottom' : 'top';
 
   if (recipeIdentified) {
@@ -99,9 +116,7 @@ async function handleOutput(
   markdown: string,
 ) {
   const { output } = options;
-  const recipeIdentified =
-    aiResult.recipe.ingredients.value.length > 0 &&
-    aiResult.recipe.instructions.value.length > 0;
+  const recipeIdentified = isRecipeIdentified(aiResult.recipe);
 
   if (output) {
     await writeFile(output, markdown);
