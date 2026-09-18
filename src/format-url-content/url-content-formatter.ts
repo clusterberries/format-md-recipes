@@ -11,7 +11,10 @@ import { renderRecipeMarkdown } from './markdown/recipe-markdown-renderer.ts';
 import { buildFallbackMarkdown } from './markdown/fallback-markdown.ts';
 import { resolveRecipeConflicts } from './ai-conflict-resolver/index.ts';
 
-export async function runUrlContentFormatter(options: CliOptions) {
+export async function runUrlContentFormatter(
+  options: CliOptions,
+  saveResult?: (title: string, markdown: string) => Promise<void>,
+) {
   const { inputUrl, noAi, mainImageOnly } = options;
 
   try {
@@ -24,11 +27,16 @@ export async function runUrlContentFormatter(options: CliOptions) {
     );
 
     if (!markdown) {
+      if (saveResult) throw new Error('No content or recipe found.');
       logWarning(`No content or recipe found for ${inputUrl}.`);
       return;
     }
 
-    await handleOutput(options, pageContent, aiResult, markdown);
+    if (saveResult) {
+      await saveResult(aiResult.recipe.title.value ?? '', markdown);
+    } else {
+      await handleOutput(options, pageContent, aiResult, markdown);
+    }
   } catch (error) {
     throw new Error(
       `Error formatting ${inputUrl}: ${error instanceof Error ? error.message : String(error)}`,

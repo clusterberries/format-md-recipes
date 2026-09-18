@@ -1,7 +1,12 @@
 import { parseOptions } from './cli.ts';
 import { runUrlContentFormatter } from './url-content-formatter.ts';
+import { runBatch } from './batch.ts';
 
 export async function run() {
   const options = parseOptions();
-  await runUrlContentFormatter(options);
+  if ('inputFile' in options) {
+    await runBatch(options);
+  } else {
+    await runUrlContentFormatter(options);
+  }
 }

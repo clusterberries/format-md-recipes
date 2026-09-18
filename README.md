@@ -66,6 +66,16 @@ Example:
 npm run format-url-content -- -i https://example.com/recipe --output recipe.md
 ```
 
+### Import multiple URLs
+
+Save URLs in `urls.txt`, one per line, then run:
+
+```bash
+npm run format-url-content -- --input-file urls.txt --dest recipes/imported
+```
+
+Each URL is saved as a separate Markdown file named after its recipe title (or URL if unavailable). Failed URLs are skipped, and a final summary reports successes and failures.
+
 ## Format list
 
 Format a text file containing a list.

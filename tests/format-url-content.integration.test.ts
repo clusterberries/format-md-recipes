@@ -1,7 +1,5 @@
 import { execFile } from 'node:child_process';
-import { createReadStream } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -14,57 +12,14 @@ import {
   expect,
   it,
 } from 'vitest';
+import { createRecipeServer, fixtures } from './helpers/recipe-server.ts';
 
 const execFileAsync = promisify(execFile);
 const projectRoot = process.cwd();
 const fixturesDirectory = path.join(projectRoot, 'tests', 'fixtures');
 const cliPath = path.join(projectRoot, 'src', 'format-url-content.ts');
 
-const fixtures = [
-  'basic-recipe-en',
-  'test1-ru',
-  'test2-ru',
-  'test3-ru',
-  'test4-ru',
-  'test5-ru',
-  'test6-ru',
-  'ingredients-structures',
-  'ingredients-instructions-overlap',
-  'ingredients-partial-overlap',
-  'ingredients-shared-word',
-  'seo-cleanup',
-  'page-noise',
-  'no-recipe-article',
-];
-
-const server = createServer((request, response) => {
-  const fixtureName = request.url?.slice(1);
-  if (
-    fixtureName &&
-    fixtures.some((fixture) => `${fixture}.html` === fixtureName)
-  ) {
-    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    createReadStream(path.join(fixturesDirectory, fixtureName)).pipe(response);
-    return;
-  }
-
-  response.writeHead(404);
-  response.end();
-});
-
-function startServer(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      if (!address || typeof address === 'string') {
-        reject(new Error('Could not determine fixture server port'));
-        return;
-      }
-      resolve(address.port);
-    });
-  });
-}
+const { server, startServer } = createRecipeServer();
 
 function normalizeMarkdown(value: string): string {
   return value.replace(/\r\n/g, '\n').replace(/\n$/, '');
