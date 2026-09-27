@@ -141,15 +141,41 @@ describe('AI conflict resolution', () => {
   );
 
   it.each(['not JSON', '[]', '{"fields":{"instructions":null}}'])(
-    'handles malformed response %s',
+    'falls back after two malformed responses: %s',
     async (response) => {
       const recipe = conflictingRecipe();
       vi.mocked(callOpenAI).mockResolvedValue(response);
       const result = await resolveRecipeConflicts(recipe, []);
       expect(result.recipe).toBe(recipe);
       expect(result.applied).toBe(false);
+      expect(callOpenAI).toHaveBeenCalledTimes(2);
     },
   );
+
+  it('retries a malformed response and applies a valid retry decision', async () => {
+    const recipe = conflictingRecipe();
+    vi.mocked(callOpenAI)
+      .mockResolvedValueOnce('not JSON')
+      .mockResolvedValue(
+        JSON.stringify({
+          fields: {
+            instructions: { action: 'select', candidateIndexes: [1] },
+          },
+        }),
+      );
+
+    const result = await resolveRecipeConflicts(recipe, []);
+
+    expect(result.applied).toBe(true);
+    expect(result.recipe.instructions.value.map((step) => step.text)).toEqual([
+      'Roast onion.',
+      'Serve cold.',
+    ]);
+    expect(callOpenAI).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(callOpenAI).mock.calls[1]?.[2]?.systemPrompt).toContain(
+      'previous response could not be parsed',
+    );
+  });
 
   it.each([
     { unresolved: 'instructions' },
@@ -206,6 +232,7 @@ describe('AI conflict resolution', () => {
     vi.mocked(callOpenAI).mockRejectedValue(new Error('API unavailable'));
     const result = await resolveRecipeConflicts(recipe, []);
     expect(result).toMatchObject({ recipe, called: true, applied: false });
+    expect(callOpenAI).toHaveBeenCalledTimes(1);
   });
 
   it('does not call the API when sources agree', async () => {

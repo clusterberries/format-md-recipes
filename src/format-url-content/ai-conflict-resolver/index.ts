@@ -32,14 +32,27 @@ export async function resolveRecipeConflicts(
 
   try {
     logInfo(`Calling AI (${MINI_MODEL}) to resolve recipe conflicts...`);
-    const response = await callOpenAI(payload, MINI_MODEL, {
+    const requestOptions = {
       systemPrompt: AI_SYSTEM_PROMPT,
       maxCompletionTokens: 1200,
-    });
-    const decision = parseDecision(response);
+    };
+    let decision = parseDecision(
+      await callOpenAI(payload, MINI_MODEL, requestOptions),
+    );
     if (!decision) {
       logWarning(
-        'AI conflict resolution returned an invalid response. Using deterministic result.',
+        'AI conflict resolution returned an invalid response. Retrying once.',
+      );
+      decision = parseDecision(
+        await callOpenAI(payload, MINI_MODEL, {
+          ...requestOptions,
+          systemPrompt: `${AI_SYSTEM_PROMPT}\n\nYour previous response could not be parsed. Return only a corrected JSON object that follows the required response format.`,
+        }),
+      );
+    }
+    if (!decision) {
+      logWarning(
+        'AI conflict resolution retry returned an invalid response. Using deterministic result.',
       );
       return { recipe, called: true, applied: false, reasons };
     }
