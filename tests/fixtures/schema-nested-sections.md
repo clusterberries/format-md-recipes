@@ -12,3 +12,5 @@
 2. Boil water.
 
    ![Step 3](https://images.example/boil.jpg)
+
+[Source](<{{PAGE_URL}}>)

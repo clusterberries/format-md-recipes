@@ -1,10 +1,11 @@
 # Soup
 
+![Recipe image](https://images.example/small.jpg)
+
 ## Ingredients
 - 1 onion
 
 ## Instructions
-1. Chop onion.
-2. Boil water.
+1. Boil onion.
 
 [Source](<{{PAGE_URL}}>)

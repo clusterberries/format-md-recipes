@@ -142,21 +142,31 @@ function generateMarkdown(
   const recipeIdentified = isRecipeIdentified(recipe);
   const imagePosition = mainImageOnly ? 'bottom' : 'top';
 
-  if (recipeIdentified) {
-    return renderRecipeMarkdown(recipe, {
-      imagePosition,
-      includeStepImages: !mainImageOnly,
-      ...(imageDestinations ? { imageDestinations } : {}),
-    });
-  }
+  const markdown = recipeIdentified
+    ? renderRecipeMarkdown(recipe, {
+        imagePosition,
+        includeStepImages: !mainImageOnly,
+        ...(imageDestinations ? { imageDestinations } : {}),
+      })
+    : buildFallbackMarkdown(
+        originalContentHtml,
+        recipe,
+        content.article?.title ?? null,
+        imagePosition,
+        imageDestinations,
+      );
+  if (!markdown) return '';
 
-  return buildFallbackMarkdown(
-    originalContentHtml,
-    recipe,
-    content.article?.title ?? null,
-    imagePosition,
-    imageDestinations,
-  );
+  const source = [
+    recipe.sourceMetadata.canonicalUrl,
+    recipe.sourceMetadata.finalUrl,
+    recipe.sourceMetadata.requestedUrl,
+  ].find((url) => url && /^https?:\/\//i.test(url));
+  // Angle brackets and encoded delimiters keep URL punctuation out of Markdown syntax.
+  const sourceLink = source
+    ? '[Source](<' + source.replace(/[<>\s]/g, encodeURIComponent) + '>)'
+    : '';
+  return [markdown, sourceLink].filter(Boolean).join('\n\n');
 }
 
 async function handleOutput(

@@ -58,3 +58,5 @@
 11. Всем приятного аппетита!
 
    ![Фото рецепта - Щи с курицей, капустой и помидорами - шаг 11](https://recipe-source.example/wp-content/uploads/2020/09/11-2-1024x652.jpg)
+
+[Source](<https://recipe-source.example/recipe/shhi-s-kuricej-kapustoj-i-pomidorami>)

@@ -20,3 +20,5 @@
 6. Приятного аппетита!
 
 ![Изображение рецепта](https://example.test/media/recipe-main.webp)
+
+[Source](<https://example.test/recipes/test-recipe-001>)

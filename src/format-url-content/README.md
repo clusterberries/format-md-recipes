@@ -47,6 +47,8 @@ Text and images share the traversal of nested instruction sections. Across sourc
 
 ## Output
 
+Notes end with a source link: the canonical HTTP(S) URL, or the final fetched URL when no usable canonical is present. HTML images prefer the largest valid responsive variant (`srcset`, including lazy attributes and `<picture>` sources) before single-image URLs.
+
 Without `-o`, a single-page run prints diagnostic JSON. Files are written atomically. Images remain remote by default; `--download-images` saves rendered images beside the note in `attachments` (or `--images-folder`). The final note name and image content hash determine attachment names. Existing matching files are reused; failed downloads retain remote URLs.
 
 Page and image requests share bounded fetching in `utils/http-fetch.ts`: timeouts, transient retries, redirect validation, and response size limits. Image downloads also have a per-recipe byte budget.

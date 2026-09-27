@@ -171,11 +171,14 @@ describe('local recipe images', () => {
       ).toEqual(png);
   });
 
-  it('downloads only the main image in main-image-only mode and keeps it at the bottom', async () => {
+  it('downloads only the main image in main-image-only mode and keeps it before the source footer', async () => {
     const { markdown } = await run('/recipe', true);
     expect(imageLinks(markdown)).toHaveLength(1);
     expect(requests).not.toContain('/step');
-    expect(markdown.trim()).toMatch(/!\[[^\]]+\]\([^)]+\)$/);
+    expect(markdown.trim()).toMatch(
+      /!\[[^\]]+\]\([^)]+\)\n\n\[Source\]\(<[^>]+>\)$/,
+    );
+    expect(markdown).toContain(`[Source](<${baseUrl}/recipe>)`);
   });
 
   it('keeps remote mode unchanged and makes no image requests', async () => {

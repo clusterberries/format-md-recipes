@@ -89,10 +89,12 @@ describe('format-url-content batch integration', () => {
       ),
     ).toBe(
       normalizeMarkdown(
-        await readFile(
-          path.join(fixturesDirectory, 'basic-recipe-en.md'),
-          'utf8',
-        ),
+        (
+          await readFile(
+            path.join(fixturesDirectory, 'basic-recipe-en.md'),
+            'utf8',
+          )
+        ).replaceAll('{{PAGE_URL}}', first),
       ),
     );
     expect(stdout).toContain('Finished: 2 of 2 successful, 0 failures.');

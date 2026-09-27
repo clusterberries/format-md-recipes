@@ -14,3 +14,5 @@ Fluffy rice with fresh herbs.
 ## Instructions
 1. Rinse the rice.
 2. Cook until tender.
+
+[Source](<{{PAGE_URL}}>)

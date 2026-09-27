@@ -11,3 +11,5 @@ A crisp layered salad with a bright dressing.
 ## Instructions
 1. Whisk the dressing.
 2. Combine the salad ingredients.
+
+[Source](<{{PAGE_URL}}>)

@@ -23,44 +23,60 @@ export function extractHtmlImageUrl(
 ): string | undefined {
   const $image = $(image);
 
+  // Responsive variants carry explicit sizes; single URLs may be thumbnails.
+  for (const element of [
+    $image,
+    ...$image
+      .closest('picture')
+      .find('source')
+      .toArray()
+      .map((source) => $(source)),
+  ]) {
+    for (const attribute of IMAGE_SRCSET_ATTRIBUTES) {
+      const url = selectBestSrcsetUrl(element.attr(attribute), pageUrl);
+      if (url) return url;
+    }
+  }
+
   for (const attribute of IMAGE_URL_ATTRIBUTES) {
     const value = $image.attr(attribute);
     const url = value ? normalizeUrl(value, pageUrl) : undefined;
     if (url) return url;
   }
 
-  for (const attribute of IMAGE_SRCSET_ATTRIBUTES) {
-    const srcsetUrl = selectBestSrcsetUrl($image.attr(attribute));
-    if (srcsetUrl) return normalizeUrl(srcsetUrl, pageUrl);
-  }
-
-  const $picture = $image.closest('picture');
-  if (!$picture.length) return undefined;
-
-  for (const source of $picture.find('source').toArray()) {
-    const $source = $(source);
-    for (const attribute of IMAGE_SRCSET_ATTRIBUTES) {
-      const srcsetUrl = selectBestSrcsetUrl($source.attr(attribute));
-      if (srcsetUrl) return normalizeUrl(srcsetUrl, pageUrl);
-    }
-  }
-
   return undefined;
 }
 
-function selectBestSrcsetUrl(srcset?: string): string | undefined {
-  if (!srcset?.trim()) return undefined;
+function selectBestSrcsetUrl(
+  srcset: string | undefined,
+  pageUrl: string,
+): string | undefined {
+  let remaining = srcset ?? '';
+  let bestUrl: string | undefined;
+  let bestWeight = 0;
 
-  const variants = srcset
-    .split(',')
-    .map((item) => item.trim())
-    .map((item) => {
-      const [url, descriptor = '1x'] = item.split(/\s+/, 2);
-      const weight = Number.parseFloat(descriptor);
-      return { url, weight: Number.isFinite(weight) ? weight : 1 };
-    })
-    .filter((item) => Boolean(item.url))
-    .sort((a, b) => b.weight - a.weight);
-
-  return variants[0]?.url;
+  // Read URLs before descriptors: commas can belong to URLs (including data URLs).
+  while (remaining) {
+    remaining = remaining.replace(/^[\s,]+/, '');
+    const token = remaining.match(/^\S+/)?.[0];
+    if (!token) break;
+    remaining = remaining.slice(token.length);
+    let descriptor = '1x';
+    if (!token.endsWith(',')) {
+      const separator = remaining.indexOf(',');
+      descriptor =
+        (separator < 0 ? remaining : remaining.slice(0, separator)).trim() ||
+        '1x';
+      remaining = separator < 0 ? '' : remaining.slice(separator + 1);
+    }
+    const weight = /^(?:\d+w|(?:\d*\.)?\d+x)$/.test(descriptor)
+      ? Number.parseFloat(descriptor)
+      : 0;
+    const url = normalizeUrl(token.replace(/,+$/, ''), pageUrl);
+    if (url && weight > bestWeight) {
+      bestUrl = url;
+      bestWeight = weight;
+    }
+  }
+  return bestUrl;
 }

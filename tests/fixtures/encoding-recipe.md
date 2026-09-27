@@ -6,3 +6,5 @@
 ## Instructions
 1. Нарежьте свёклу.
 2. Сварите суп.
+
+[Source](<{{PAGE_URL}}>)

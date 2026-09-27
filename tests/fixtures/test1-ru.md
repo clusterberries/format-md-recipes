@@ -1,6 +1,6 @@
 # Мелкая молодая картошка в духовке в кожуре целиком
 
-![Изображение рецепта](http://assets.recipe-source.example/res/380/img/content-v2/69/ea/42474/melkaya-kartoshka-v-duxovke-v-kojure_1579113174_15_max.jpg)
+![Изображение рецепта](http://assets.recipe-source.example/res/640/img/content-v2/69/ea/42474/melkaya-kartoshka-v-duxovke-v-kojure_1579113174_15_max.jpg)
 
 Так аппетитно, красиво. Не оторваться до последнего кусочка!
 
@@ -62,3 +62,5 @@
 14. Вкусная молодая картошка в кожуре готова, можно подавать к столу!
 
    ![Шаг 14.](http://assets.recipe-source.example/res/380/img/content-v2/69/ea/42474/melkaya-kartoshka-v-duxovke-v-kojure_1579244377_14_max.jpg)
+
+[Source](<https://recipe-source.example/cooking/42474-melkaya-kartoshka-v-duxovke-v-kojure>)

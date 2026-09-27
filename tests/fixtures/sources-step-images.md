@@ -14,3 +14,5 @@
 
    ![Step 3](https://images.example/boil.jpg)
 4. Serve.
+
+[Source](<{{PAGE_URL}}>)

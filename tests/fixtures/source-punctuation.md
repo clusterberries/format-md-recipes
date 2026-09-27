@@ -17,4 +17,4 @@ A simple soup.
 1. Chop the tomatoes and onion.
 2. Simmer until soft.
 
-[Source](<{{PAGE_URL}}>)
+[Source](<https://example.com/soup_(red)?q=%22hot%22&x=%3Ctag%3E>)

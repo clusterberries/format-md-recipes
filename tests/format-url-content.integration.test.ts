@@ -82,8 +82,25 @@ describe('format-url-content integration', () => {
       readFile(expectedPath, 'utf8'),
     ]);
 
-    expect(normalizeMarkdown(actual)).toBe(normalizeMarkdown(expected));
+    expect(normalizeMarkdown(actual)).toBe(
+      normalizeMarkdown(
+        expected
+          .replaceAll('{{PAGE_URL}}', fixtureUrl)
+          .replaceAll('{{ORIGIN}}', `http://127.0.0.1:${port}`),
+      ),
+    );
   }
+
+  it(
+    'records the final URL after a redirect',
+    async () => {
+      await runAndCompare(
+        'redirect-recipe',
+        path.join(fixturesDirectory, 'source-redirect.md'),
+      );
+    },
+    testTimeout,
+  );
 
   describe('default image mode', () => {
     it.each(fixtures)(

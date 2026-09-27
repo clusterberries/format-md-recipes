@@ -6,6 +6,15 @@ import iconv from 'iconv-lite';
 const fixturesDirectory = path.join(process.cwd(), 'tests', 'fixtures');
 
 export const fixtures = [
+  'image-srcset-width',
+  'image-srcset-density',
+  'image-srcset-lazy',
+  'image-srcset-picture',
+  'image-srcset-invalid',
+  'image-srcset-fallback',
+  'image-srcset-relative',
+  'source-invalid',
+  'source-punctuation',
   'basic-recipe-en',
   'test1-ru',
   'test2-ru',
@@ -98,6 +107,11 @@ export const encodingFixtures: {
 
 export function createRecipeServer() {
   const server = createServer((request, response) => {
+    if (request.url === '/redirect-recipe.html') {
+      response.writeHead(302, { location: '/basic-recipe-en.html' });
+      response.end();
+      return;
+    }
     const fixtureName = request.url?.slice(1);
     const encodingFixture = encodingFixtures.find(
       ({ name }) => fixtureName === `${name}.html`,
