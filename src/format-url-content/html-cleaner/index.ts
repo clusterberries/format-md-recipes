@@ -5,20 +5,15 @@ import {
   removeGlobalNoise,
   removeHtmlComments,
   removeNamedNoise,
-  removeNoiseByText,
 } from './noise-remover.ts';
 import { HARD_REMOVE_SELECTOR } from './constants.ts';
 import { normalizeHtml } from './utils.ts';
-import type { CleanupMode } from './types.ts';
 
 /**
  * Selects the likely main content, removes technical and non-recipe noise,
  * and preserves images without normalizing them.
  */
-export function cleanRecipeContent(
-  content: string,
-  cleanupMode: CleanupMode = 'minimal',
-): string {
+export function cleanRecipeContent(content: string): string {
   if (!content.trim()) {
     return '';
   }
@@ -31,8 +26,7 @@ export function cleanRecipeContent(
 
   removeHtmlComments(root);
   removeGlobalNoise(root);
-  removeNamedNoise($, root, cleanupMode);
-  removeNoiseByText($, root, cleanupMode);
+  removeNamedNoise($, root);
   removeEmptyElements($, root);
 
   return normalizeHtml(root.contents().toString());

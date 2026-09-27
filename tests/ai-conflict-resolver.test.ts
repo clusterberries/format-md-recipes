@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { callOpenAI } from '../src/shared/openai-client.ts';
 import { resolveRecipeConflicts } from '../src/format-url-content/ai-conflict-resolver/index.ts';
+import { parseDecision } from '../src/format-url-content/ai-conflict-resolver/decision-validation.ts';
 import { extractRecipe, jsonLd } from './helpers/extract-recipe.ts';
 
 vi.mock('../src/shared/openai-client.ts', () => ({ callOpenAI: vi.fn() }));
@@ -149,6 +150,41 @@ describe('AI conflict resolution', () => {
       expect(result.applied).toBe(false);
     },
   );
+
+  it.each([
+    { unresolved: 'instructions' },
+    { fields: [] },
+    { fields: { title: { action: 'merge', candidateIndexes: [0] } } },
+    { fields: { title: { action: 'select', candidateIndex: '1' } } },
+    {
+      fields: { instructions: { action: 'filter', dropTexts: 'Boil water.' } },
+    },
+    { fields: { instructions: { action: 'filter', dropTexts: [1] } } },
+  ])(
+    'rejects an invalid decision shape without changing the recipe: %j',
+    async (decision) => {
+      const response = JSON.stringify(decision);
+      expect(parseDecision(response)).toBeNull();
+      const recipe = conflictingRecipe();
+      vi.mocked(callOpenAI).mockResolvedValue(response);
+      const result = await resolveRecipeConflicts(recipe, []);
+      expect(result.recipe).toBe(recipe);
+      expect(result.applied).toBe(false);
+    },
+  );
+
+  it('preserves valid scalar, collection, and unresolved decisions', () => {
+    const decision = {
+      fields: {
+        title: { action: 'select', candidateIndex: 1 },
+        description: { action: 'keep-deterministic' },
+        ingredients: { action: 'merge', candidateIndexes: [0, 1] },
+        instructions: { action: 'filter', dropTexts: ['Advertisement'] },
+      },
+      unresolved: ['servings'],
+    };
+    expect(parseDecision(JSON.stringify(decision))).toEqual(decision);
+  });
 
   it('refuses to filter out every instruction', async () => {
     const recipe = conflictingRecipe();

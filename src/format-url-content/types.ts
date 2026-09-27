@@ -48,6 +48,11 @@ export type RecipeSource = 'microdata' | 'html' | 'form';
 export interface RecipeContentCandidate {
   source: RecipeSource;
   location: string;
+  context?: {
+    text: string;
+    hasImages: boolean;
+    linkDensity: number;
+  };
   title: string | null;
   description?: string | null;
   ingredients: string[];
@@ -168,6 +173,11 @@ export interface CollectionConflict<T> {
   reason: ConflictReason;
 }
 
+export type RecipeConflict =
+  | FieldConflict<string>
+  | CollectionConflict<ExtractedIngredient>
+  | CollectionConflict<ExtractedInstruction>;
+
 export interface ReconciledRecipe {
   title: ReconciledField<string>;
   description: ReconciledField<string>;
@@ -181,7 +191,7 @@ export interface ReconciledRecipe {
   stepImages: ExtractedImage[];
   galleryImages: ExtractedImage[];
   notes: ExtractedField<string>[];
-  conflicts: Array<FieldConflict<unknown>>;
+  conflicts: RecipeConflict[];
   sourceMetadata: SourceMetadata;
 }
 

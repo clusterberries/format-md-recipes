@@ -19,10 +19,7 @@ import {
 import { extractMicrodataCandidates } from './microdata-extractor.ts';
 import { extractRecipeHtmlCandidates } from './html-extractor.ts';
 import { extractRecipeFormValues } from './form-extractor.ts';
-import {
-  deduplicateOverlappingCandidates,
-  selectBestCandidates,
-} from './candidate-utils.ts';
+import { selectBestCandidates } from './candidate-utils.ts';
 
 export function extractIndependentSources(
   html: string,
@@ -37,11 +34,9 @@ export function extractIndependentSources(
     metadata.canonicalUrl,
   );
   const jsonLd = selectedRecipe ? [selectedRecipe] : [];
-  const microdata = selectBestCandidates(
-    deduplicateOverlappingCandidates(extractMicrodataCandidates(document)),
-  );
+  const microdata = selectBestCandidates(extractMicrodataCandidates(document));
   const recipeHtml = selectBestCandidates(
-    deduplicateOverlappingCandidates(extractRecipeHtmlCandidates(document)),
+    extractRecipeHtmlCandidates(document),
   );
   const forms = extractRecipeFormValues(document);
   const images = buildRecipeImagesResult(

@@ -16,20 +16,6 @@ export function getAiReasons(
     reasons.push('recipe candidates have similar scores');
   }
   if (
-    recipe.ingredients.alternatives.some(
-      (value) => value.length > recipe.ingredients.value.length,
-    )
-  ) {
-    reasons.push('selected ingredients may be incomplete');
-  }
-  if (
-    recipe.instructions.alternatives.some(
-      (value) => value.length > recipe.instructions.value.length,
-    )
-  ) {
-    reasons.push('selected instructions may be incomplete');
-  }
-  if (
     recipe.ingredients.conflicts.length ||
     recipe.instructions.conflicts.length
   ) {
@@ -42,7 +28,7 @@ export function getAiReasons(
   ) {
     reasons.push('ingredients may contain instruction-like text');
   }
-  return [...new Set(reasons)];
+  return reasons;
 }
 
 // Heuristic: real ingredient entries are short phrases, not full sentences describing an action.

@@ -52,7 +52,7 @@ export function reconcileRecipe(recipe: NormalizedRecipe): ReconciledRecipe {
       ...totalTime.conflicts,
       ...ingredients.conflicts,
       ...instructions.conflicts,
-    ] as Array<FieldConflict<unknown>>,
+    ],
     sourceMetadata: recipe.sourceMetadata,
   };
 }

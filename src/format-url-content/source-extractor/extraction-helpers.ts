@@ -1,7 +1,20 @@
 import type * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
 import type { RecipeContentCandidate } from '../types.ts';
-import { normalizeText } from '../utils/dom-helpers.ts';
+import { getLinkDensity, normalizeText } from '../utils/dom-helpers.ts';
+
+/** Capture scoring context from the actual root, not a diagnostic location ID. */
+export function extractCandidateContext(
+  $: cheerio.CheerioAPI,
+  element: Element,
+): NonNullable<RecipeContentCandidate['context']> {
+  const root = $(element);
+  return {
+    text: `${root.attr('id') ?? ''} ${root.attr('class') ?? ''} ${root.text().slice(0, 2000)}`,
+    hasImages: root.find('img').length > 0,
+    linkDensity: getLinkDensity($, element),
+  };
+}
 
 export function extractElementValue(
   $element: cheerio.Cheerio<Element>,
@@ -23,10 +36,6 @@ export function extractElementValues(
       .get()
       .filter((value): value is string => Boolean(value)),
   );
-}
-
-export function uniqueStrings(values: string[]): string[] {
-  return [...new Set(cleanStrings(values))];
 }
 
 // Repeated ingredients and cooking steps can be intentional.

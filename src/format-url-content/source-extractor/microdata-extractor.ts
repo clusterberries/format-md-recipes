@@ -3,6 +3,7 @@ import type { Element } from 'domhandler';
 import type { RecipeContentCandidate } from '../types.ts';
 import {
   extractElementValue,
+  extractCandidateContext,
   extractElementValues,
   extractListItemText,
   hasRecipeContent,
@@ -19,6 +20,7 @@ export function extractMicrodataCandidates(
     candidates.push({
       source: 'microdata',
       location: `itemtype-recipe-${index}`,
+      context: extractCandidateContext($, element),
       title: extractElementValue($root.find('[itemprop="name" i]').first()),
       description: extractElementValue(
         $root.find('[itemprop="description" i]').first(),

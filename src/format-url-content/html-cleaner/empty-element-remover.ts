@@ -19,7 +19,7 @@ export function removeEmptyElements(
     root.find(REMOVABLE_EMPTY_SELECTOR).each((_, el) => {
       const $element = $(el);
 
-      if (shouldProtectRecipeElement($, $element)) {
+      if (shouldProtectRecipeElement($element)) {
         return;
       }
 

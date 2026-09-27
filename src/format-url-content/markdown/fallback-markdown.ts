@@ -11,10 +11,7 @@ export function buildFallbackMarkdown(
   imagePosition: 'top' | 'bottom',
   imageDestinations?: ReadonlyMap<string, string>,
 ): string {
-  const cleanedHtml = cleanRecipeContent(
-    originalContentHtml,
-    'minimal',
-  )?.trim();
+  const cleanedHtml = cleanRecipeContent(originalContentHtml).trim();
   const title = articleTitle?.trim() || recipe.title.value || '';
 
   if (!cleanedHtml && !title && !recipe.mainImage) {

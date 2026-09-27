@@ -24,10 +24,10 @@ export function detectRecipeCandidates(params: {
       scoreJsonLdCandidate(recipe, index, params.$),
     ),
     ...params.microdata.map((candidate, index) =>
-      scoreContentCandidate(candidate, `microdata-${index}`, params.$, true),
+      scoreContentCandidate(candidate, `microdata-${index}`, true),
     ),
     ...params.recipeHtml.map((candidate, index) =>
-      scoreContentCandidate(candidate, `html-${index}`, params.$, false),
+      scoreContentCandidate(candidate, `html-${index}`, false),
     ),
     ...scoreFormCandidates(params.forms),
     ...(params.readability

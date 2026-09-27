@@ -3,6 +3,7 @@ import type { Element } from 'domhandler';
 import type { RecipeContentCandidate } from '../types.ts';
 import {
   extractElementValue,
+  extractCandidateContext,
   extractListItemText,
   getFingerprint,
   hasRecipeContent,
@@ -63,6 +64,7 @@ export function extractRecipeHtmlCandidates(
     const candidate: RecipeContentCandidate = {
       source: 'html',
       location: `recipe-html-${index}`,
+      context: extractCandidateContext($, root),
       title: extractElementValue($root.find('h1').first()),
       description:
         extractHtmlDescription($, $('.entry-content').first()) ??
@@ -120,10 +122,7 @@ function findSection(
       ),
     );
 
-  const match = matching.first();
-  if (!match.length) return match;
-
-  return match;
+  return matching.first();
 }
 
 function extractListValues(
@@ -211,24 +210,19 @@ function extractHtmlDescription(
     ? $root
     : $root.find('.entry-content').first();
   const descriptionRoot = contentRoot.length ? contentRoot : $root;
-  const descriptionElements = contentRoot.length
-    ? contentRoot.children('p, h2')
-    : descriptionRoot.children('p, h2');
+  const descriptionElements = descriptionRoot.children('p, h2');
   descriptionElements.each((_, element) => {
     const $element = $(element);
     const tag = element.tagName.toLowerCase();
     const text = $element.text().replace(/\s+/g, ' ').trim();
-    if (!text) return;
+    if (!text) return true;
     if (
       tag === 'h2' &&
       (INGREDIENT_PATTERN.test(text) || INSTRUCTION_PATTERN.test(text))
     )
       return false;
-    if (tag === 'h2') {
-      entryParts.push($.html(element));
-      return;
-    }
     entryParts.push($.html(element));
+    return true;
   });
 
   if (entryParts.length) return entryParts.join('\n\n');
