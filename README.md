@@ -21,6 +21,22 @@ OPENAI_MODEL_FULL=gpt-5.5
 npm install
 ```
 
+## Tests and coverage
+
+Run the tests with `npm test`, or generate coverage with:
+
+```bash
+npm run test:coverage
+```
+
+Coverage is printed in the terminal. Open `coverage/index.html` for the detailed
+HTML report. All TypeScript files under `src/` are included, including untested
+files. No minimum coverage thresholds are enforced yet.
+
+Vitest collects coverage inside its test workers. CLI integration tests that
+launch a separate Node.js process still run, but execution in those subprocesses
+is not included in this report.
+
 ## Format MD
 
 Format Markdown files or directories with OpenAI:

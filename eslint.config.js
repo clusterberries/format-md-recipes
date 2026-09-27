@@ -6,10 +6,10 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default defineConfig(
   {
-    ignores: ['node_modules/**', 'scripts/**'],
+    ignores: ['node_modules/**', 'scripts/**', 'coverage/**'],
   },
   {
-    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    files: ['src/**/*.ts', 'tests/**/*.ts', 'vitest.config.ts'],
     extends: [
       js.configs.recommended,
       ...tseslint.configs.recommendedTypeChecked,
