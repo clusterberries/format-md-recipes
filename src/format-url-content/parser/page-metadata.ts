@@ -7,7 +7,9 @@ export function decodePageHtml(
   contentType: string | null,
 ): { html: string; encoding: string } {
   const encoding = sniffHTMLEncoding(buffer, {
-    transportLayerEncodingLabel: contentType ?? undefined,
+    transportLayerEncodingLabel: contentType?.match(
+      /(?:^|;)\s*charset\s*=\s*["']?([^\s;"']+)/i,
+    )?.[1],
     defaultEncoding: 'windows-1252',
   });
 

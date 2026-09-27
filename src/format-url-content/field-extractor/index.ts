@@ -12,7 +12,7 @@ import {
 } from './scalar-fields.ts';
 import { extractIngredients } from './ingredients.ts';
 import { extractInstructions } from './instructions.ts';
-import { extractImages } from './images.ts';
+import { attachInstructionImages, extractImages } from './images.ts';
 
 export function extractNormalizedRecipe(
   sources: ExtractedPageSources,
@@ -123,12 +123,10 @@ export function extractNormalizedRecipe(
   normalized.mainImage = images.mainImage;
   normalized.stepImages = images.stepImages;
   normalized.galleryImages = images.galleryImages;
-  normalized.instructions = normalized.instructions.map((instruction) => {
-    const image = normalized.stepImages.find(
-      (candidate) => candidate.stepIndex === instruction.stepIndex,
-    );
-    return image ? { ...instruction, image } : instruction;
-  });
+  normalized.instructions = attachInstructionImages(
+    normalized.instructions,
+    normalized.stepImages,
+  );
 
   return normalized;
 }

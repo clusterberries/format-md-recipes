@@ -179,17 +179,26 @@ function mergeCompatibleIngredients(
   all: ExtractedIngredient[],
 ): ExtractedIngredient[] {
   const result = [...selected];
-  all.forEach((ingredient) => {
-    if (isAggregateIngredient(ingredient, selected)) return;
-    const existing = result.find((item) =>
-      sameIngredientName(item, ingredient),
-    );
-    if (!existing && ingredient.source !== selected[0]?.source)
-      result.push(ingredient);
-    else if (existing && isRicherIngredient(ingredient, existing)) {
-      result[result.indexOf(existing)] = ingredient;
+  for (const [source, ingredients] of groupBySource(all)) {
+    if (source === selected[0]?.source) continue;
+    // Match occurrences one-to-one so repeated entries within a source survive.
+    const matched = new Set<number>();
+    for (const ingredient of ingredients) {
+      if (isAggregateIngredient(ingredient, selected)) continue;
+      const index = result.findIndex(
+        (item, index) =>
+          !matched.has(index) && sameIngredientName(item, ingredient),
+      );
+      if (index < 0) {
+        matched.add(result.length);
+        result.push(ingredient);
+      } else {
+        matched.add(index);
+        if (isRicherIngredient(ingredient, result[index]!))
+          result[index] = ingredient;
+      }
     }
-  });
+  }
   return result;
 }
 
@@ -239,7 +248,8 @@ function isRicherIngredient(
   b: ExtractedIngredient,
 ): boolean {
   return (
-    a.text.length > b.text.length ||
+    normalize(a.text.replace(/\s*[:\-–—]\s*/g, ' ')).length >
+      normalize(b.text.replace(/\s*[:\-–—]\s*/g, ' ')).length ||
     Boolean(a.quantity && !b.quantity) ||
     Boolean(a.unit && !b.unit)
   );
@@ -289,5 +299,7 @@ function normalize(value: string): string {
 }
 
 function normalizeIngredient(value: string): string {
-  return normalize(value).replace(/\s*[:\-–—]\s*/g, ' ');
+  return normalize(
+    value.replace(/\s*\([^)]*\)/g, ' ').replace(/\s*[:\-–—]\s*/g, ' '),
+  );
 }

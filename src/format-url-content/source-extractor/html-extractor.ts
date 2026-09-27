@@ -6,7 +6,7 @@ import {
   extractListItemText,
   getFingerprint,
   hasRecipeContent,
-  uniqueStrings,
+  cleanStrings,
 } from './extraction-helpers.ts';
 
 const RECIPE_SIGNAL_PATTERN =
@@ -91,11 +91,17 @@ function resolveListSection(
     .first();
 
   if (heading.length) {
-    const list = heading.nextAll('ul, ol').first();
-    if (list.length && !list.is('.ilparams')) return list;
-
-    const parent = heading.parent();
-    if (parent.find('p').length) return parent;
+    const level = Number(heading[0]!.tagName.slice(1));
+    const boundary = Array.from(
+      { length: level },
+      (_, index) => `h${index + 1}`,
+    ).join(', ');
+    const section = heading
+      .nextUntil(boundary)
+      .not('h1, h2, h3, h4, h5, h6, .ilparams');
+    const lists = section.filter('ul, ol');
+    if (lists.length) return lists;
+    if (section.length) return section;
   }
 
   return findSection($, $root, pattern);
@@ -117,11 +123,7 @@ function findSection(
   const match = matching.first();
   if (!match.length) return match;
 
-  const list = match.find('> ul, > ol').first();
-  if (list.length) return list;
-
-  const nestedList = match.find('ul, ol').first();
-  return nestedList.length ? nestedList : match;
+  return match;
 }
 
 function extractListValues(
@@ -129,27 +131,32 @@ function extractListValues(
   $container: cheerio.Cheerio<Element>,
 ): string[] {
   if (!$container.length) return [];
+  if ($container.length > 1) {
+    return $container
+      .toArray()
+      .flatMap((element) => extractListValues($, $(element)));
+  }
 
   const ingredientParagraphs = $container
     .find('.ilist > div > p')
     .map((_, element) => $(element).text().replace(/\s+/g, ' ').trim())
     .get()
     .filter(Boolean);
-  if (ingredientParagraphs.length) return uniqueStrings(ingredientParagraphs);
+  if (ingredientParagraphs.length) return cleanStrings(ingredientParagraphs);
 
   const stepItems = $container
     .find('.step_n')
     .map((_, element) => $(element).find('p').first().text().trim())
     .get()
     .filter(Boolean);
-  if (stepItems.length) return uniqueStrings(stepItems);
+  if (stepItems.length) return cleanStrings(stepItems);
 
   const recipeSteps = $container
     .find('.recipe-step')
     .map((_, element) => $(element).find('p').first().text().trim())
     .get()
     .filter(Boolean);
-  if (recipeSteps.length) return uniqueStrings(recipeSteps);
+  if (recipeSteps.length) return cleanStrings(recipeSteps);
 
   const directListItems = $container.is('ol, ul')
     ? $container.children('li')
@@ -158,31 +165,31 @@ function extractListValues(
     .map((_, element) => extractListItemText($, element))
     .get()
     .filter(Boolean);
-  if (directListValues.length) return uniqueStrings(directListValues);
+  if (directListValues.length) return cleanStrings(directListValues);
 
   const nestedListItems = $container
     .find('ol:not(.ilparams) > li, ul:not(.ilparams) > li')
     .map((_, element) => extractListItemText($, element))
     .get()
     .filter(Boolean);
-  if (nestedListItems.length) return uniqueStrings(nestedListItems);
+  if (nestedListItems.length) return cleanStrings(nestedListItems);
 
   const tableRows = $container
     .find('tr')
     .map((_, element) => $(element).text().trim())
     .get()
     .filter(Boolean);
-  if (tableRows.length) return uniqueStrings(tableRows);
+  if (tableRows.length) return cleanStrings(tableRows);
 
   const paragraphs = $container
     .find('p')
     .map((_, element) => $(element).text().trim())
     .get()
     .filter(Boolean);
-  if (paragraphs.length) return uniqueStrings(paragraphs);
+  if (paragraphs.length) return cleanStrings(paragraphs);
 
   const fallback = $container.text().trim();
-  return fallback ? uniqueStrings([fallback]) : [];
+  return fallback ? cleanStrings([fallback]) : [];
 }
 
 function extractHtmlDescription(
@@ -216,7 +223,7 @@ function extractHtmlDescription(
       tag === 'h2' &&
       (INGREDIENT_PATTERN.test(text) || INSTRUCTION_PATTERN.test(text))
     )
-      return;
+      return false;
     if (tag === 'h2') {
       entryParts.push($.html(element));
       return;

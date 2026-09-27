@@ -1,6 +1,7 @@
-import { createReadStream } from 'node:fs';
+import { createReadStream, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
+import iconv from 'iconv-lite';
 
 const fixturesDirectory = path.join(process.cwd(), 'tests', 'fixtures');
 
@@ -19,11 +20,104 @@ export const fixtures = [
   'seo-cleanup',
   'page-noise',
   'no-recipe-article',
+  'sources-partial-overlap',
+  'repeated-json-ld',
+  'repeated-microdata',
+  'repeated-html',
+  'sources-agree',
+  'sources-disagree',
+  'html-groups',
+  'schema-nested-sections',
+  'microdata-nested-containers',
+  'sources-step-images',
+  'schema-array-yield',
+  'schema-page-match-url',
+  'schema-page-match-id',
+  'schema-page-match-main-entity',
+  'schema-canonical-match',
+  'schema-most-complete',
+  'schema-incomplete-alternative',
+  'schema-duplicates',
+  'schema-malformed',
+];
+
+// Store readable UTF-8 HTML; encode the actual HTTP response for these cases.
+export const encodingFixtures: {
+  name: string;
+  encoding: string;
+  contentType: string | null;
+  metaCharset?: string;
+  bom?: boolean;
+}[] = [
+  {
+    name: 'header-utf8',
+    encoding: 'utf-8',
+    contentType: 'text/html; charset=utf-8',
+  },
+  {
+    name: 'header-windows1251',
+    encoding: 'windows-1251',
+    contentType: 'text/html; charset="windows-1251"',
+  },
+  {
+    name: 'header-quoted',
+    encoding: 'utf-8',
+    contentType: 'text/html; Charset = "UTF-8"; other=value',
+  },
+  {
+    name: 'header-over-meta',
+    encoding: 'utf-8',
+    contentType: 'text/html; charset=utf-8',
+    metaCharset: 'windows-1251',
+  },
+  {
+    name: 'bom-over-header',
+    encoding: 'utf-8',
+    contentType: 'text/html; charset=windows-1251',
+    bom: true,
+  },
+  {
+    name: 'meta-no-header',
+    encoding: 'utf-8',
+    contentType: null,
+    metaCharset: 'utf-8',
+  },
+  {
+    name: 'meta-no-charset',
+    encoding: 'utf-8',
+    contentType: 'text/html',
+    metaCharset: 'utf-8',
+  },
+  {
+    name: 'meta-invalid-charset',
+    encoding: 'utf-8',
+    contentType: 'text/html; charset=unknown',
+    metaCharset: 'utf-8',
+  },
 ];
 
 export function createRecipeServer() {
   const server = createServer((request, response) => {
     const fixtureName = request.url?.slice(1);
+    const encodingFixture = encodingFixtures.find(
+      ({ name }) => fixtureName === `${name}.html`,
+    );
+    if (encodingFixture) {
+      let html = readFileSync(
+        path.join(fixturesDirectory, 'encoding-recipe.html'),
+        'utf8',
+      );
+      if (encodingFixture.metaCharset)
+        html = html.replace(
+          '<head>',
+          `<head><meta charset="${encodingFixture.metaCharset}">`,
+        );
+      if (encodingFixture.bom) html = '\uFEFF' + html;
+      if (encodingFixture.contentType)
+        response.setHeader('content-type', encodingFixture.contentType);
+      response.end(iconv.encode(html, encodingFixture.encoding));
+      return;
+    }
     if (
       fixtureName &&
       fixtures.some((fixture) => `${fixture}.html` === fixtureName)

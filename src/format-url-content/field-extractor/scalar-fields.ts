@@ -28,7 +28,14 @@ export function extractSchemaField(
 ): ExtractedField<string>[] {
   return recipes.flatMap((recipe, index) =>
     fieldFromValue<string>(
-      recipe[property],
+      Array.isArray(recipe[property])
+        ? recipe[property]
+            .filter(
+              (value: unknown) =>
+                typeof value === 'string' || typeof value === 'number',
+            )
+            .join(', ')
+        : recipe[property],
       'json-ld',
       `json-ld-${index}.${fieldName}`,
     ),

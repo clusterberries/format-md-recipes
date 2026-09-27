@@ -1,62 +1,56 @@
 # Format URL Content
 
-Fetch an English or Russian recipe page and save the recipe as Markdown.
+Converts English and Russian recipe pages to Markdown. Entry point: `src/format-url-content.ts`.
 
 ## Usage
 
-Run these commands from the project root:
+Run from the project root:
 
 ```bash
-npm run format-url-content -- -i <url> -o recipe.md
-npm run format-url-content -- -i <url> -o recipe.md --download-images
-npm run format-url-content -- --input-file urls.txt --dest Recipes --download-images
+npm run format-url-content -- -i <url> [options]
 ```
 
-For batch imports, put one URL per line in `urls.txt`. Blank lines, comments starting with `#`, and duplicate URLs are skipped. Notes are named after recipe titles, with suffixes such as `-2` to avoid overwriting existing notes. Failed pages are reported and the batch continues.
+- `-i, --input <url>` — Fetch a single recipe page.
+- `--input-file <file>` — Read a UTF-8 file containing one URL per line.
+- `-o, --output <file>` — Save a single recipe as Markdown; omit to print diagnostic JSON.
+- `-d, --dest <folder>` — Output directory for `--input-file`.
+- `--no-ai` — Disable AI conflict resolution.
+- `--main-image-only` — Skip step images and place the main image at the bottom.
+- `--download-images` — Save rendered images locally; requires `--output` or batch `--dest`.
+- `--images-folder <name>` — Folder beside the notes for downloaded images; default `attachments`. Use a folder name, not a path.
+- `-h, --help` — Show CLI help.
 
-Options:
+Choose exactly one of `--input` or `--input-file`. Batch mode requires `--dest` and cannot use `--output`.
 
-- `--no-ai`: disable AI conflict resolution.
-- `--main-image-only`: include only the main image, at the bottom of the note.
-- `--download-images`: save images locally. Requires `-o` or batch `--dest`.
-- `--images-folder <name>`: folder name beside the notes, default `attachments`. Use with `--download-images`; enter a name, not a path.
-
-Without `-o`, a single-page run prints diagnostic JSON with a short Markdown preview.
-
-## How it works
-
-The script fetches the page, extracts recipe fields from structured data and HTML, and reconciles the results. AI is used only when conflicting extractions need review. If no recipe is identified, it exports cleaned article content instead.
-
-The final recipe is rendered as Markdown. Page and image downloads share networking helpers in `utils`.
-
-## Saving images
-
-By default, image links point to the original website. With `--download-images`:
-
-1. Choose the final note filename, including any batch suffix.
-2. Download only the main image and step images included in the note. Repeated URLs are downloaded once. Article fallback exports include only the selected main image.
-3. Save the images, then save the note with relative Markdown links.
-
-Example output:
-
-```text
-Recipes/
-  Tomato Soup.md
-  attachments/
-    Tomato Soup-main-<hash>.jpg
-    Tomato Soup-step-01-<hash>.png
-```
-
-All notes in the output directory share one images folder, with no recipe subfolders. To use a different name:
+Examples:
 
 ```bash
+npm run format-url-content -- -i https://example.com/recipe -o recipe.md --no-ai
+npm run format-url-content -- -i https://example.com/recipe -o recipe.md --download-images --main-image-only
 npm run format-url-content -- --input-file urls.txt --dest Recipes --download-images --images-folder images
 ```
 
-Image names start with the final note name, followed by their role and a short content hash. Unsafe characters are replaced and long names are shortened. Matching existing images are reused; existing attachments are never automatically deleted.
+## Pipeline
 
-Original image bytes are kept. Supported formats are JPEG, PNG, GIF, WebP, BMP, and AVIF. Downloads have timeouts, retries for temporary failures, and size limits: 10 MiB per image and 50 MiB of completed image responses per recipe.
+1. `cli.ts` parses options. `batch.ts` processes URL lists, chooses unique filenames, and continues after individual failures.
+2. `parser/page-parser.ts` fetches and decodes HTML, reads metadata, and runs Readability for article fallback.
+3. `source-extractor/` extracts JSON-LD, microdata, HTML, and form values. `field-extractor/` normalizes fields and associates step images.
+4. `parser/reconciler.ts` compares complete source collections. Scalars prefer structured sources; collections prefer completeness, then source priority. Ingredients can be supplemented from other sources. Repetitions within a collection are preserved.
+5. `ai-conflict-resolver/` optionally selects, merges, or filters extracted values when sources disagree. `--no-ai` skips it; invalid responses and API failures retain the deterministic result.
+6. `markdown/` renders the recipe. If ingredients or instructions are missing, it renders cleaned article content instead. `url-content-formatter.ts` coordinates rendering and saving.
 
-If a download fails, the note keeps that image's remote URL and the script logs a warning. The recipe is still saved, and batch summaries report notes that retain remote images.
+## Selection rules
 
-For Obsidian, export into your vault or copy the notes **together with their images folder**, keeping the same layout. Relative links support spaces and Russian filenames. No plugin is needed.
+Only one JSON-LD recipe supplies fields and images. Prefer a match to the fetched or canonical URL through `url`, `@id`, or `mainEntityOfPage`, ignoring fragments. Next prefer both ingredients and instructions, then more entries; ties use document order. Exact duplicate objects are ignored. Separate `@id` references are not resolved.
+
+Text and images share the traversal of nested instruction sections. Across sources, step images are matched by text occurrence when a reference collection is available.
+
+## Output
+
+Without `-o`, a single-page run prints diagnostic JSON. Files are written atomically. Images remain remote by default; `--download-images` saves rendered images beside the note in `attachments` (or `--images-folder`). The final note name and image content hash determine attachment names. Existing matching files are reused; failed downloads retain remote URLs.
+
+Page and image requests share bounded fetching in `utils/http-fetch.ts`: timeouts, transient retries, redirect validation, and response size limits. Image downloads also have a per-recipe byte budget.
+
+## Tests
+
+Run `npm test`. The integration suite serves local HTML, invokes the CLI with `--no-ai`, and compares complete output with `.md` fixtures in `tests/fixtures/`. Encoding cases vary the HTTP headers and response bytes. AI decisions and network failures use mocked tests to inspect behavior that Markdown alone cannot show.

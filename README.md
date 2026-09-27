@@ -57,7 +57,7 @@ npm run format-url-content -- -i <url> -o recipe.md --download-images
 
 Omit `--download-images` to keep remote image URLs. Use `--no-ai` to disable AI conflict resolution.
 
-See [Format URL Content](src/format-url-content/README.md) for batch imports, options, and image saving.
+For all options, run `npm run format-url-content -- --help`. See [Format URL Content](src/format-url-content/README.md) for the developer overview.
 
 ## Format list
 

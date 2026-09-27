@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fetchWithRetry } from '../src/format-url-content/utils/http-fetch.ts';
 import { fetchPageWithRetry } from '../src/format-url-content/parser/page-fetcher.ts';
+import { assertSafeUrl } from '../src/format-url-content/utils/url-guard.ts';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -81,19 +82,39 @@ describe('shared bounded fetch', () => {
     ).rejects.toThrow('Timed out');
   });
 
-  it('validates redirect destinations before requesting them', async () => {
+  it.each([
+    'http://127.0.0.1/private',
+    'http://[::ffff:127.0.0.1]/private',
+    'http://[::ffff:7f00:1]/private',
+    'http://[::ffff:192.168.1.1]/private',
+    'http://[::ffff:169.254.169.254]/private',
+    'http://[fe90::1]/private',
+  ])(
+    'validates redirect destination %s before requesting it',
+    async (location) => {
+      vi.stubEnv('FORMAT_URL_CONTENT_ALLOW_PRIVATE_HOSTS', '0');
+      const fetch = vi.fn().mockResolvedValue(
+        new Response(null, {
+          status: 302,
+          headers: { location },
+        }),
+      );
+      vi.stubGlobal('fetch', fetch);
+      await expect(fetchWithRetry('https://example.com/image')).rejects.toThrow(
+        'private/local',
+      );
+      expect(fetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    'https://fcooking.example/recipe',
+    'https://fdrecipes.example/recipe',
+    'https://[::ffff:8.8.8.8]/recipe',
+    'https://[2606:4700:4700::1111]/recipe',
+  ])('allows public hostname or address %s', (url) => {
     vi.stubEnv('FORMAT_URL_CONTENT_ALLOW_PRIVATE_HOSTS', '0');
-    const fetch = vi.fn().mockResolvedValue(
-      new Response(null, {
-        status: 302,
-        headers: { location: 'http://127.0.0.1/private' },
-      }),
-    );
-    vi.stubGlobal('fetch', fetch);
-    await expect(fetchWithRetry('https://example.com/image')).rejects.toThrow(
-      'private/local',
-    );
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(assertSafeUrl(url).href).toBe(new URL(url).href);
   });
 
   it('rejects unsupported schemes before fetching', async () => {

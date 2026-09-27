@@ -6,7 +6,7 @@ import {
   extractElementValues,
   extractListItemText,
   hasRecipeContent,
-  uniqueStrings,
+  cleanStrings,
 } from './extraction-helpers.ts';
 
 export function extractMicrodataCandidates(
@@ -53,7 +53,7 @@ function extractMicrodataIngredients(
     .get()
     .filter(Boolean);
 
-  if (metaIngredients.length) return uniqueStrings(metaIngredients);
+  if (metaIngredients.length) return cleanStrings(metaIngredients);
 
   return extractElementValues($, $root.find('[itemprop="recipeIngredient" i]'));
 }
@@ -66,6 +66,8 @@ function extractMicrodataInstructions(
 
   $root.find('[itemprop="recipeInstructions" i]').each((_, container) => {
     const $container = $(container);
+    // A parent instructions container already accounts for its nested steps.
+    if ($container.parents('[itemprop="recipeInstructions" i]').length) return;
     const listItems = $container.is('ol, ul')
       ? $container.children('li')
       : $container.find('ol > li, ul > li');
@@ -82,5 +84,5 @@ function extractMicrodataInstructions(
     if (text) steps.push(text);
   });
 
-  return uniqueStrings(steps);
+  return cleanStrings(steps);
 }

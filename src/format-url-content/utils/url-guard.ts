@@ -2,8 +2,8 @@
 // Does not resolve DNS, so rebinding attacks against public hostnames are not covered.
 
 const IPV4_PATTERN = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-const IPV4_MAPPED_IPV6_PATTERN =
-  /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i;
+// URL normalizes dotted IPv4-mapped addresses to two hexadecimal groups.
+const IPV4_MAPPED_IPV6_PATTERN = /^::ffff:([\da-f]{1,4}):([\da-f]{1,4})$/i;
 
 export function assertSafeUrl(value: string): URL {
   let url: URL;
@@ -35,8 +35,12 @@ function isBlockedHostname(hostname: string): boolean {
   if (hostname === 'localhost' || hostname.endsWith('.localhost')) return true;
 
   const mappedMatch = hostname.match(IPV4_MAPPED_IPV6_PATTERN);
-  const ipv4Candidate = mappedMatch?.[1] ?? hostname;
-  const ipv4Match = ipv4Candidate.match(IPV4_PATTERN);
+  if (mappedMatch) {
+    const high = parseInt(mappedMatch[1]!, 16);
+    const low = parseInt(mappedMatch[2]!, 16);
+    return isPrivateIpv4([high >> 8, high & 255, low >> 8, low & 255]);
+  }
+  const ipv4Match = hostname.match(IPV4_PATTERN);
 
   if (ipv4Match) {
     const octets = ipv4Match.slice(1, 5).map(Number);
@@ -44,9 +48,10 @@ function isBlockedHostname(hostname: string): boolean {
     return isPrivateIpv4(octets);
   }
 
+  if (!hostname.includes(':')) return false;
   if (hostname === '::1' || hostname === '::') return true;
   if (hostname.startsWith('fc') || hostname.startsWith('fd')) return true; // fc00::/7
-  if (hostname.startsWith('fe80:')) return true; // link-local
+  if (/^fe[89ab][\da-f]:/i.test(hostname)) return true; // fe80::/10
 
   return false;
 }

@@ -17,7 +17,7 @@ export function extractElementValues(
   $: cheerio.CheerioAPI,
   $elements: cheerio.Cheerio<Element>,
 ): string[] {
-  return uniqueStrings(
+  return cleanStrings(
     $elements
       .map((_, element) => extractElementValue($(element)))
       .get()
@@ -26,13 +26,14 @@ export function extractElementValues(
 }
 
 export function uniqueStrings(values: string[]): string[] {
-  return [
-    ...new Set(
-      values
-        .map((value) => normalizeText(value))
-        .filter((value) => value && !isImageOnlyMarkup(value)),
-    ),
-  ];
+  return [...new Set(cleanStrings(values))];
+}
+
+// Repeated ingredients and cooking steps can be intentional.
+export function cleanStrings(values: string[]): string[] {
+  return values
+    .map(normalizeText)
+    .filter((value) => value && !isImageOnlyMarkup(value));
 }
 
 function isImageOnlyMarkup(value: string): boolean {

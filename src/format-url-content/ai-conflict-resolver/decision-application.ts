@@ -86,6 +86,8 @@ function applyCollectionDecision(
   )
     return recipe;
   const candidates = [collection.value, ...collection.alternatives];
+  if (decision.candidateIndexes.some((index) => !candidates[index]?.length))
+    return recipe;
   const selectedGroups = decision.candidateIndexes
     .map((index) => candidates[index])
     .filter((group): group is ExtractedIngredient[] | ExtractedInstruction[] =>
@@ -96,7 +98,9 @@ function applyCollectionDecision(
   const value =
     decision.action === 'select'
       ? firstGroup
-      : deduplicateCollection(selectedGroups.flat());
+      : mergeCollections<ExtractedIngredient | ExtractedInstruction>(
+          selectedGroups,
+        );
   if (!value) return recipe;
   return {
     ...recipe,
@@ -140,14 +144,22 @@ function applyFilterDecision<
   };
 }
 
-function deduplicateCollection<T extends { text: string }>(values: T[]): T[] {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = value.text.trim().toLocaleLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+function mergeCollections<T extends { text: string }>(groups: T[][]): T[] {
+  const result: T[] = [];
+  const counts = new Map<string, number>();
+  for (const group of groups) {
+    const occurrences = new Map<string, number>();
+    for (const value of group) {
+      const key = value.text.trim().toLocaleLowerCase();
+      const count = (occurrences.get(key) ?? 0) + 1;
+      occurrences.set(key, count);
+      if (count > (counts.get(key) ?? 0)) {
+        result.push(value);
+        counts.set(key, count);
+      }
+    }
+  }
+  return result;
 }
 
 function averageCollectionConfidence<T extends { confidence: number }>(

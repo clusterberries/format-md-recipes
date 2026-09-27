@@ -1,6 +1,6 @@
 import type { RecipeImage, RecipeSchema, StepImage } from './types.ts';
 import { isRecord, isUsableImageUrl, normalizeUrl } from './utils.ts';
-import { MAX_SCHEMA_RECURSION_DEPTH } from '../utils/dom-helpers.ts';
+import { flattenSchemaInstructions } from '../utils/schema-instructions.ts';
 
 export function extractSchemaMainImages(
   schema: RecipeSchema,
@@ -43,64 +43,6 @@ export function extractSchemaStepImages(
   }
 
   return [...uniqueImages.values()];
-}
-
-function flattenSchemaInstructions(value: unknown, depth = 0): RecipeSchema[] {
-  if (depth > MAX_SCHEMA_RECURSION_DEPTH) {
-    return [];
-  }
-
-  if (!value) {
-    return [];
-  }
-
-  if (typeof value === 'string') {
-    return [{ text: value }];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => flattenSchemaInstructions(item, depth + 1));
-  }
-
-  if (!isRecord(value)) {
-    return [];
-  }
-
-  const type = getSchemaType(value);
-
-  if (type.includes('HowToSection')) {
-    return flattenSchemaInstructions(
-      value.itemListElement ??
-        value.recipeInstructions ??
-        value.steps ??
-        value.itemList,
-      depth + 1,
-    );
-  }
-
-  if (
-    type.includes('HowToStep') ||
-    typeof value.text === 'string' ||
-    value.image !== undefined
-  ) {
-    return [value];
-  }
-
-  return [];
-}
-
-function getSchemaType(value: Record<string, unknown>): string[] {
-  const type = value['@type'];
-
-  if (typeof type === 'string') {
-    return [type];
-  }
-
-  if (Array.isArray(type)) {
-    return type.filter((item): item is string => typeof item === 'string');
-  }
-
-  return [];
 }
 
 function extractImageUrlsFromUnknown(

@@ -3,7 +3,6 @@ import type {
   ExtractedPageSources,
   FieldSource,
 } from '../types.ts';
-import { normalizeText } from '../utils/dom-helpers.ts';
 import { SOURCE_CONFIDENCE } from './constants.ts';
 
 export function extractIngredients(
@@ -59,7 +58,7 @@ export function extractIngredients(
       ingredients.push(createIngredient(value.value, 'form', value.location));
     });
 
-  return deduplicateIngredients(ingredients);
+  return ingredients;
 }
 
 function toStrings(value: unknown): string[] {
@@ -154,22 +153,4 @@ function isLikelyIngredientText(value: string): boolean {
   )
     return false;
   return true;
-}
-
-function deduplicateIngredients(
-  ingredients: ExtractedIngredient[],
-): ExtractedIngredient[] {
-  const seen = new Set<string>();
-  return ingredients.filter((ingredient) => {
-    const key = canonicalIngredientKey(ingredient.text);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function canonicalIngredientKey(value: string): string {
-  return normalizeText(
-    value.replace(/\s*[:\-–—]\s*/g, ' ').replace(/\s*\([^)]*\)/g, ' '),
-  ).toLocaleLowerCase();
 }

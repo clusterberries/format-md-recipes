@@ -3,10 +3,8 @@ import type {
   ExtractedPageSources,
   FieldSource,
 } from '../types.ts';
-import {
-  MAX_SCHEMA_RECURSION_DEPTH,
-  normalizeText,
-} from '../utils/dom-helpers.ts';
+import { normalizeText } from '../utils/dom-helpers.ts';
+import { flattenSchemaInstructions } from '../utils/schema-instructions.ts';
 import { SOURCE_CONFIDENCE } from './constants.ts';
 
 export function extractInstructions(
@@ -15,17 +13,20 @@ export function extractInstructions(
   const instructions: ExtractedInstruction[] = [];
 
   sources.jsonLd.forEach((recipe, recipeIndex) => {
-    flattenInstructions(recipe.recipeInstructions).forEach((text, index) => {
-      if (!isLikelyInstructionText(text)) return;
-      instructions.push(
-        createInstruction(
-          text,
-          index,
-          'json-ld',
-          `json-ld-${recipeIndex}.recipeInstructions[${index}]`,
-        ),
-      );
-    });
+    flattenSchemaInstructions(recipe.recipeInstructions).forEach(
+      (step, index) => {
+        const text = step.text;
+        if (typeof text !== 'string' || !isLikelyInstructionText(text)) return;
+        instructions.push(
+          createInstruction(
+            text,
+            index,
+            'json-ld',
+            `json-ld-${recipeIndex}.recipeInstructions[${index}]`,
+          ),
+        );
+      },
+    );
   });
 
   [...sources.microdata, ...sources.recipeHtml].forEach((candidate) => {
@@ -42,21 +43,7 @@ export function extractInstructions(
     });
   });
 
-  return deduplicateInstructions(instructions);
-}
-
-function flattenInstructions(value: unknown, depth = 0): string[] {
-  if (depth > MAX_SCHEMA_RECURSION_DEPTH) return [];
-  if (typeof value === 'string') return value.trim() ? [value.trim()] : [];
-  if (Array.isArray(value))
-    return value.flatMap((item) => flattenInstructions(item, depth + 1));
-  if (typeof value !== 'object' || value === null) return [];
-  const item = value as Record<string, unknown>;
-  if (typeof item.text === 'string') return [item.text];
-  return flattenInstructions(
-    item.itemListElement ?? item.steps ?? item.recipeInstructions,
-    depth + 1,
-  );
+  return instructions;
 }
 
 function createInstruction(
@@ -91,18 +78,4 @@ function isLikelyInstructionText(value: string): boolean {
   if (/^(?:шаг|step)\s*\d+\s*[:.-]?\s*$/i.test(text)) return false;
   if (/^[\d\s\p{P}\p{S}]+$/u.test(text)) return false;
   return true;
-}
-
-function deduplicateInstructions(
-  instructions: ExtractedInstruction[],
-): ExtractedInstruction[] {
-  const seen = new Set<string>();
-  return instructions.filter((instruction) => {
-    const text = normalizeInstructionText(instruction.text);
-    if (!text || !isLikelyInstructionText(text)) return false;
-    const key = text.replace(/\s+/g, ' ').trim().toLocaleLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }

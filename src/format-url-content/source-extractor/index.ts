@@ -12,7 +12,10 @@ import type {
   ParsedArticle,
 } from '../types.ts';
 import type { RecipeImage } from '../images-parser/types.ts';
-import { extractJsonLdRecipes } from './json-ld-extractor.ts';
+import {
+  extractJsonLdRecipes,
+  selectJsonLdRecipe,
+} from './json-ld-extractor.ts';
 import { extractMicrodataCandidates } from './microdata-extractor.ts';
 import { extractRecipeHtmlCandidates } from './html-extractor.ts';
 import { extractRecipeFormValues } from './form-extractor.ts';
@@ -28,7 +31,12 @@ export function extractIndependentSources(
   readability: ParsedArticle | null,
 ): ExtractedPageSources {
   const document = cheerio.load(html);
-  const jsonLd = extractJsonLdRecipes(document);
+  const selectedRecipe = selectJsonLdRecipe(
+    extractJsonLdRecipes(document),
+    pageUrl,
+    metadata.canonicalUrl,
+  );
+  const jsonLd = selectedRecipe ? [selectedRecipe] : [];
   const microdata = selectBestCandidates(
     deduplicateOverlappingCandidates(extractMicrodataCandidates(document)),
   );

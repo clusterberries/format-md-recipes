@@ -12,12 +12,19 @@ import {
   expect,
   it,
 } from 'vitest';
-import { createRecipeServer, fixtures } from './helpers/recipe-server.ts';
+import {
+  createRecipeServer,
+  encodingFixtures,
+  fixtures,
+} from './helpers/recipe-server.ts';
 
 const execFileAsync = promisify(execFile);
 const projectRoot = process.cwd();
 const fixturesDirectory = path.join(projectRoot, 'tests', 'fixtures');
 const cliPath = path.join(projectRoot, 'src', 'format-url-content.ts');
+// CLI startup can exceed Vitest's default 5s on a busy machine.
+const cliTimeout = 25_000;
+const testTimeout = 30_000;
 
 const { server, startServer } = createRecipeServer();
 
@@ -61,6 +68,7 @@ describe('format-url-content integration', () => {
       [cliPath, '-i', fixtureUrl, '--no-ai', ...extraArgs, '-o', outputPath],
       {
         cwd: projectRoot,
+        timeout: cliTimeout,
         env: {
           ...process.env,
           // Fixture server runs on 127.0.0.1; opt into the SSRF guard's local-host allowance for tests only.
@@ -84,6 +92,7 @@ describe('format-url-content integration', () => {
         const expectedPath = path.join(fixturesDirectory, `${fixture}.md`);
         await runAndCompare(fixture, expectedPath);
       },
+      testTimeout,
     );
   });
 
@@ -99,6 +108,20 @@ describe('format-url-content integration', () => {
         );
         await runAndCompare(fixture, expectedPath, ['--main-image-only']);
       },
+      testTimeout,
+    );
+  });
+
+  describe('HTTP encoding', () => {
+    it.each(encodingFixtures)(
+      'converts $name into readable Markdown',
+      async ({ name }) => {
+        await runAndCompare(
+          name,
+          path.join(fixturesDirectory, 'encoding-recipe.md'),
+        );
+      },
+      testTimeout,
     );
   });
 });
