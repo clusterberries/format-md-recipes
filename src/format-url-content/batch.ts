@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, access } from 'node:fs/promises';
+import { writeFileAtomically } from './utils/atomic-file.ts';
 import path from 'node:path';
 import type { BatchOptions } from './cli.ts';
 import { runUrlContentFormatter } from './url-content-formatter.ts';
@@ -29,14 +30,27 @@ function outputName(title: string, inputUrl: string): string {
   );
 }
 
-async function saveMarkdown(dest: string, name: string, markdown: string) {
+async function saveMarkdown(
+  dest: string,
+  name: string,
+  renderForOutput: (output: string) => Promise<string>,
+) {
   for (let suffix = 1; ; suffix++) {
     const output = path.join(
       dest,
       `${name}${suffix === 1 ? '' : `-${suffix}`}.md`,
     );
     try {
-      await writeFile(output, markdown, { encoding: 'utf8', flag: 'wx' });
+      // Avoid downloading for known collisions, then publish exclusively to
+      // protect against another importer creating the same note concurrently.
+      try {
+        await access(output);
+        continue;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      const markdown = await renderForOutput(output);
+      await writeFileAtomically(output, markdown, true);
       console.log(`Saved to ${output}`);
       return;
     } catch (error) {
@@ -59,21 +73,29 @@ export async function runBatch(options: BatchOptions) {
 
   const failures: string[] = [];
   let successful = 0;
+  let notesWithRemoteImages = 0;
   for (const [index, entry] of entries.entries()) {
     console.log(`[${index + 1}/${entries.length}] Processing ${entry.url}`);
     try {
       assertSafeUrl(entry.url);
-      await runUrlContentFormatter(
+      const result = await runUrlContentFormatter(
         {
           inputUrl: entry.url,
           output: null,
           noAi: options.noAi,
           mainImageOnly: options.mainImageOnly,
+          downloadImages: options.downloadImages,
+          imagesFolder: options.imagesFolder,
         },
-        (title, markdown) =>
-          saveMarkdown(options.dest, outputName(title, entry.url), markdown),
+        (title, renderForOutput) =>
+          saveMarkdown(
+            options.dest,
+            outputName(title, entry.url),
+            renderForOutput,
+          ),
       );
       successful++;
+      if (result?.imageFailures) notesWithRemoteImages++;
     } catch (error) {
       const failure = `Line ${entry.line}: ${entry.url} — ${error instanceof Error ? error.message : String(error)}`;
       failures.push(failure);
@@ -83,6 +105,11 @@ export async function runBatch(options: BatchOptions) {
   console.log(
     `Finished: ${successful} of ${entries.length} successful, ${failures.length} failure${failures.length === 1 ? '' : 's'}.`,
   );
+  if (options.downloadImages) {
+    console.log(
+      `Image downloads: ${successful - notesWithRemoteImages} notes fully local, ${notesWithRemoteImages} notes retain remote images.`,
+    );
+  }
   if (failures.length) {
     console.error(`Failed URLs:\n${failures.join('\n')}`);
     process.exitCode = 1;

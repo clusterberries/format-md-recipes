@@ -1,4 +1,8 @@
 import path from 'path';
+import {
+  DEFAULT_IMAGES_FOLDER,
+  validateImagesFolder,
+} from './utils/images-folder.ts';
 import { program } from 'commander';
 import type { CliOptions } from './types.ts';
 import { assertSafeUrl } from './utils/url-guard.ts';
@@ -10,6 +14,8 @@ interface CommanderOptions {
   output?: string;
   ai?: boolean;
   mainImageOnly?: boolean;
+  downloadImages?: boolean;
+  imagesFolder: string;
 }
 
 export interface BatchOptions {
@@ -17,6 +23,8 @@ export interface BatchOptions {
   dest: string;
   noAi: boolean;
   mainImageOnly: boolean;
+  downloadImages: boolean;
+  imagesFolder: string;
 }
 
 export function parseOptions(): CliOptions | BatchOptions {
@@ -30,6 +38,15 @@ export function parseOptions(): CliOptions | BatchOptions {
       '-o, --output <file>',
       'output file path; defaults to stdout when omitted',
     )
+    .option(
+      '--download-images',
+      'save selected images beside the note and use local links',
+    )
+    .option(
+      '--images-folder <name>',
+      'images folder name beside the notes (used with --download-images)',
+      DEFAULT_IMAGES_FOLDER,
+    )
     .option('--no-ai', 'disable conditional AI conflict resolution')
     .option(
       '--main-image-only',
@@ -38,6 +55,11 @@ export function parseOptions(): CliOptions | BatchOptions {
     .parse(process.argv);
 
   const options = program.opts<CommanderOptions>();
+  try {
+    validateImagesFolder(options.imagesFolder);
+  } catch (error) {
+    program.error(error instanceof Error ? error.message : String(error));
+  }
 
   if (Boolean(options.input) === Boolean(options.inputFile)) {
     program.error('Specify exactly one of --input or --input-file.');
@@ -51,10 +73,17 @@ export function parseOptions(): CliOptions | BatchOptions {
       dest: path.resolve(options.dest),
       noAi: options.ai === false,
       mainImageOnly: Boolean(options.mainImageOnly),
+      downloadImages: Boolean(options.downloadImages),
+      imagesFolder: options.imagesFolder,
     };
   }
   if (options.dest) {
     program.error('--dest requires --input-file.');
+  }
+  if (options.downloadImages && !options.output) {
+    program.error(
+      '--download-images requires --output or --input-file with --dest.',
+    );
   }
   const inputUrl = options.input!;
 
@@ -69,5 +98,7 @@ export function parseOptions(): CliOptions | BatchOptions {
     output: options.output ? path.resolve(options.output) : null,
     noAi: options.ai === false,
     mainImageOnly: Boolean(options.mainImageOnly),
+    downloadImages: Boolean(options.downloadImages),
+    imagesFolder: options.imagesFolder,
   };
 }

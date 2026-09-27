@@ -1,4 +1,8 @@
-import { writeFile } from '../shared/file-utils.ts';
+import { writeFileAtomically } from './utils/atomic-file.ts';
+import {
+  collectRenderedImages,
+  downloadRecipeImages,
+} from './image-downloader.ts';
 import type {
   CliOptions,
   ParsedRecipePage,
@@ -13,13 +17,31 @@ import { resolveRecipeConflicts } from './ai-conflict-resolver/index.ts';
 
 export async function runUrlContentFormatter(
   options: CliOptions,
-  saveResult?: (title: string, markdown: string) => Promise<void>,
+  saveResult?: (
+    title: string,
+    renderForOutput: (output: string) => Promise<string>,
+  ) => Promise<void>,
 ) {
   const { inputUrl, noAi, mainImageOnly } = options;
 
   try {
+    if (options.downloadImages && !options.output && !saveResult) {
+      throw new Error('Downloading images requires an output path.');
+    }
+    let imageFailures = 0;
     const pageContent = await parseRecipePage(inputUrl);
     const aiResult = await resolveConflicts(pageContent, noAi);
+    if (isRecipeIdentified(aiResult.recipe)) {
+      logInfo(
+        mainImageOnly
+          ? 'Image mode: main image only (step images skipped, main image at bottom).'
+          : 'Image mode: all images (main image after title, step images inline).',
+      );
+    } else {
+      logInfo(
+        'Could not identify recipe (missing ingredients/instructions). Falling back to cleaned page content.',
+      );
+    }
     const markdown = generateMarkdown(
       pageContent,
       aiResult.recipe,
@@ -32,11 +54,36 @@ export async function runUrlContentFormatter(
       return;
     }
 
+    const renderForOutput = async (output: string): Promise<string> => {
+      if (!options.downloadImages) return markdown;
+      const images = collectRenderedImages(
+        aiResult.recipe,
+        isRecipeIdentified(aiResult.recipe) && !mainImageOnly,
+      );
+      const { destinations, failed } = await downloadRecipeImages(
+        images,
+        output,
+        options.imagesFolder,
+      );
+      imageFailures = failed;
+      return generateMarkdown(
+        pageContent,
+        aiResult.recipe,
+        mainImageOnly,
+        destinations,
+      );
+    };
     if (saveResult) {
-      await saveResult(aiResult.recipe.title.value ?? '', markdown);
+      await saveResult(aiResult.recipe.title.value ?? '', renderForOutput);
     } else {
-      await handleOutput(options, pageContent, aiResult, markdown);
+      await handleOutput(
+        options,
+        pageContent,
+        aiResult,
+        options.output ? await renderForOutput(options.output) : markdown,
+      );
     }
+    return { imageFailures };
   } catch (error) {
     throw new Error(
       `Error formatting ${inputUrl}: ${error instanceof Error ? error.message : String(error)}`,
@@ -89,31 +136,26 @@ function generateMarkdown(
   content: ParsedRecipePage,
   recipe: ReconciledRecipe,
   mainImageOnly: boolean,
+  imageDestinations?: ReadonlyMap<string, string>,
 ): string {
   const originalContentHtml = content.article?.contentHtml?.trim() ?? '';
   const recipeIdentified = isRecipeIdentified(recipe);
   const imagePosition = mainImageOnly ? 'bottom' : 'top';
 
   if (recipeIdentified) {
-    logInfo(
-      mainImageOnly
-        ? 'Image mode: main image only (step images skipped, main image at bottom).'
-        : 'Image mode: all images (main image after title, step images inline).',
-    );
     return renderRecipeMarkdown(recipe, {
       imagePosition,
       includeStepImages: !mainImageOnly,
+      ...(imageDestinations ? { imageDestinations } : {}),
     });
   }
 
-  logInfo(
-    'Could not identify recipe (missing ingredients/instructions). Falling back to cleaned page content.',
-  );
   return buildFallbackMarkdown(
     originalContentHtml,
     recipe,
     content.article?.title ?? null,
     imagePosition,
+    imageDestinations,
   );
 }
 
@@ -127,7 +169,7 @@ async function handleOutput(
   const recipeIdentified = isRecipeIdentified(aiResult.recipe);
 
   if (output) {
-    await writeFile(output, markdown);
+    await writeFileAtomically(output, markdown);
     logSuccess(`Saved to ${output}`);
   } else {
     logSuccess('Output sent to stdout.');

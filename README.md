@@ -49,32 +49,15 @@ npm run format -- -i recipes/source-folder --dest recipes/formatted-folder
 
 ## Format URL Content
 
-Fetch a recipe page and convert its content to Markdown:
+Fetch a recipe page and save it as Markdown:
 
 ```bash
-npm run format-url-content -- -i <url> [options]
+npm run format-url-content -- -i <url> -o recipe.md --download-images
 ```
 
-- `-i, --input <url>` — Recipe page URL to fetch and format.
-- `-o, --output <file>` — Write Markdown to a file; otherwise print it to stdout.
-- `--no-ai` — Disable AI conflict resolution when extracted fields disagree.
-- `--main-image-only` — Include only the main image, placed at the end of the recipe.
+Omit `--download-images` to keep remote image URLs. Use `--no-ai` to disable AI conflict resolution.
 
-Example:
-
-```bash
-npm run format-url-content -- -i https://example.com/recipe --output recipe.md
-```
-
-### Import multiple URLs
-
-Save URLs in `urls.txt`, one per line, then run:
-
-```bash
-npm run format-url-content -- --input-file urls.txt --dest recipes/imported
-```
-
-Each URL is saved as a separate Markdown file named after its recipe title (or URL if unavailable). Failed URLs are skipped, and a final summary reports successes and failures.
+See [Format URL Content](src/format-url-content/README.md) for batch imports, options, and image saving.
 
 ## Format list
 

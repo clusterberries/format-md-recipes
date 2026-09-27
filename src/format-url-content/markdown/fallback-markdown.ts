@@ -9,6 +9,7 @@ export function buildFallbackMarkdown(
   recipe: ReconciledRecipe,
   articleTitle: string | null,
   imagePosition: 'top' | 'bottom',
+  imageDestinations?: ReadonlyMap<string, string>,
 ): string {
   const cleanedHtml = cleanRecipeContent(
     originalContentHtml,
@@ -22,7 +23,12 @@ export function buildFallbackMarkdown(
 
   const language = getLanguage(recipe.sourceMetadata.language);
   const mainImage = recipe.mainImage
-    ? renderImage(recipe.mainImage, getDefaultImageAlt(language), language)
+    ? renderImage(
+        recipe.mainImage,
+        getDefaultImageAlt(language),
+        language,
+        imageDestinations,
+      )
     : '';
   const body = cleanedHtml ? convertRecipeHtmlToMarkdown(cleanedHtml) : '';
 

@@ -9,6 +9,7 @@ import { getDefaultImageAlt, getLanguage, type Language } from './language.ts';
 export type RecipeMarkdownOptions = {
   imagePosition?: 'top' | 'bottom';
   includeStepImages?: boolean;
+  imageDestinations?: ReadonlyMap<string, string>;
 };
 
 export function renderRecipeMarkdown(
@@ -21,7 +22,12 @@ export function renderRecipeMarkdown(
   const sections: string[] = [];
   const title = recipe.title.value ?? 'Recipe';
   const mainImage = recipe.mainImage
-    ? renderImage(recipe.mainImage, getDefaultImageAlt(language), language)
+    ? renderImage(
+        recipe.mainImage,
+        getDefaultImageAlt(language),
+        language,
+        options.imageDestinations,
+      )
     : '';
 
   sections.push(`# ${escapeHeading(title)}`);
@@ -42,6 +48,7 @@ export function renderRecipeMarkdown(
     recipe.instructions.value,
     language,
     includeStepImages,
+    options.imageDestinations,
   );
   if (instructions) sections.push(instructions);
 
@@ -119,6 +126,7 @@ function renderInstructions(
   instructions: ReconciledRecipe['instructions']['value'],
   language: Language = 'en',
   includeStepImages = true,
+  imageDestinations?: ReadonlyMap<string, string>,
 ): string {
   if (!instructions.length) return '';
 
@@ -132,7 +140,7 @@ function renderInstructions(
           : `Step ${instruction.stepIndex + 1}`;
       lines.push(
         '',
-        `   ${renderImage(instruction.image, fallbackAlt, language)}`,
+        `   ${renderImage(instruction.image, fallbackAlt, language, imageDestinations)}`,
       );
     }
   });
@@ -144,6 +152,7 @@ export function renderImage(
   image: ExtractedImage,
   fallbackAlt: string,
   language: Language = 'en',
+  imageDestinations?: ReadonlyMap<string, string>,
 ): string {
   const actualFallback = getDefaultImageAlt(language);
   let altSource =
@@ -161,7 +170,7 @@ export function renderImage(
     altSource = fallbackAlt || actualFallback;
   }
   const alt = altSource.replace(/[[\]]/g, '').trim();
-  return `![${alt}](${image.url})`;
+  return `![${alt}](${imageDestinations?.get(image.url) ?? image.url})`;
 }
 
 function escapeHeading(value: string): string {

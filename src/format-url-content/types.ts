@@ -9,6 +9,8 @@ export interface CliOptions {
   output: string | null;
   noAi: boolean;
   mainImageOnly: boolean;
+  downloadImages: boolean;
+  imagesFolder: string;
 }
 
 export interface ParsedArticle {
