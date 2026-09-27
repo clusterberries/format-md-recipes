@@ -16,6 +16,7 @@ export const fixtures = [
   'source-invalid',
   'source-punctuation',
   'basic-recipe-en',
+  'koolinar-main-image',
   'test1-ru',
   'test2-ru',
   'test3-ru',

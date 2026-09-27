@@ -39,10 +39,14 @@ export function extractIndependentSources(
     extractRecipeHtmlCandidates(document),
   );
   const forms = extractRecipeFormValues(document);
+  const recipeTitle =
+    (typeof jsonLd[0]?.name === 'string' ? jsonLd[0].name : null) ??
+    microdata[0]?.title ??
+    recipeHtml[0]?.title;
   const images = buildRecipeImagesResult(
     jsonLd.flatMap((recipe) => extractSchemaMainImages(recipe, pageUrl)),
     jsonLd.flatMap((recipe) => extractSchemaStepImages(recipe, pageUrl)),
-    extractHtmlImages(document, pageUrl),
+    extractHtmlImages(document, pageUrl, recipeTitle),
     [
       ...metadataImage(metadata.openGraphImage),
       ...metadataImage(metadata.twitterImage),

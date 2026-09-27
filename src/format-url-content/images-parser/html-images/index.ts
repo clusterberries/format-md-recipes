@@ -14,6 +14,7 @@ import { scoreHtmlImage } from './scorer.ts';
 export function extractHtmlImages(
   $: cheerio.CheerioAPI,
   pageUrl: string,
+  recipeTitle?: string | null,
 ): HtmlImageCandidate[] {
   const stepContainers = findStepContainers($);
   const candidates: HtmlImageCandidate[] = [];
@@ -37,6 +38,7 @@ export function extractHtmlImages(
       isSchemaImageProp: $(image).is('[itemprop="image"]'),
       imageDescription,
       alt,
+      recipeTitle,
       stepIndex,
       documentIndex,
       width,

@@ -6,6 +6,7 @@ const MAIN_IMAGE_PATTERN =
 const SCHEMA_IMAGE_PROP_BONUS = 90;
 const MAIN_IMAGE_PATTERN_BONUS = 45;
 const RECIPE_ALT_TEXT_BONUS = 35;
+const RECIPE_TITLE_MATCH_BONUS = 100;
 const EARLY_DOCUMENT_POSITION_THRESHOLD = 3;
 const EARLY_DOCUMENT_POSITION_BONUS = 15;
 const LARGE_IMAGE_AREA_THRESHOLD = 250_000;
@@ -21,6 +22,7 @@ export function scoreHtmlImage(params: {
   isSchemaImageProp: boolean;
   imageDescription: string;
   alt?: string | undefined;
+  recipeTitle?: string | null | undefined;
   stepIndex?: number | undefined;
   documentIndex: number;
   width?: number | undefined;
@@ -30,6 +32,7 @@ export function scoreHtmlImage(params: {
     isSchemaImageProp,
     imageDescription,
     alt,
+    recipeTitle,
     stepIndex,
     documentIndex,
     width,
@@ -42,6 +45,8 @@ export function scoreHtmlImage(params: {
     score += MAIN_IMAGE_PATTERN_BONUS;
   if (stepIndex === undefined && /recipe|рецепт/i.test(alt ?? ''))
     score += RECIPE_ALT_TEXT_BONUS;
+  if (stepIndex === undefined && matchesRecipeTitle(alt, recipeTitle))
+    score += RECIPE_TITLE_MATCH_BONUS;
   if (documentIndex < EARLY_DOCUMENT_POSITION_THRESHOLD)
     score += EARLY_DOCUMENT_POSITION_BONUS;
 
@@ -57,4 +62,21 @@ export function scoreHtmlImage(params: {
   if (hasNoise(imageDescription)) score -= NOISE_PENALTY;
 
   return score;
+}
+
+function matchesRecipeTitle(
+  alt?: string,
+  recipeTitle?: string | null,
+): boolean {
+  if (!alt || !recipeTitle) return false;
+
+  const normalizeTitle = (value: string): string =>
+    value
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+  const normalizedAlt = normalizeTitle(alt);
+
+  return normalizedAlt !== '' && normalizedAlt === normalizeTitle(recipeTitle);
 }

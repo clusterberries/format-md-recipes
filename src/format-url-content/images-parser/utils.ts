@@ -1,5 +1,5 @@
 const NOISE_PATTERN =
-  /(?:^|[^a-z0-9])(logo|icon|avatar|profile|author|sprite|pixel|tracking|analytics|advert|advertisement|banner|promo|sponsor|social|share|facebook|instagram|pinterest|youtube|tiktok|twitter|cookie|consent|newsletter|subscribe|rating|star|badge|menu|search|close|arrow|chevron)/i;
+  /(?:^|[^a-z0-9])(logo|icon|avatar|profile|author|sprite|pixel|tracking|analytics|advert|advertisement|banner|promo|sponsor|social|share|facebook|instagram|pinterest|youtube|tiktok|twitter|cookie|consent|newsletter|subscribe|rating|star|badge|menu|search|close|arrow|chevron)(?![a-z0-9])/i;
 
 const BAD_IMAGE_EXTENSION_PATTERN = /\.(svg|ico)(?:$|\?)/i;
 
