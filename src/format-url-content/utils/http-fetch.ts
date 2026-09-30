@@ -1,4 +1,4 @@
-import { logWarning } from '../../shared/utils.ts';
+import { logWarning } from '../logger.ts';
 import { assertSafeUrl } from './url-guard.ts';
 
 const REQUEST_TIMEOUT_MS = 20_000;

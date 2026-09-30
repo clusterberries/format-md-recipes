@@ -5,7 +5,7 @@ import { decodePageHtml, extractPageMetadata } from './page-metadata.ts';
 import { extractIndependentSources } from '../source-extractor/index.ts';
 import { extractNormalizedRecipe } from '../field-extractor/index.ts';
 import { reconcileRecipe } from './reconciler.ts';
-import { logInfo } from '../../shared/utils.ts';
+import { logInfo } from '../logger.ts';
 import type { ParsedRecipePage } from '../types.ts';
 
 export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {

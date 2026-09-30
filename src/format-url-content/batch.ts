@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { BatchOptions } from './cli.ts';
 import { runUrlContentFormatter } from './url-content-formatter.ts';
 import { assertSafeUrl } from './utils/url-guard.ts';
+import { getLogFile, logError, logInfo, logProgress } from './logger.ts';
 
 function safeName(value: string): string {
   const name = Array.from(value.replace(/[<>:"/\\|?*\p{Cc}]/gu, '-').trim())
@@ -51,7 +52,7 @@ async function saveMarkdown(
       }
       const markdown = await renderForOutput(output);
       await writeFileAtomically(output, markdown, true);
-      console.log(`Saved to ${output}`);
+      logProgress(`Saved to ${output}`);
       return;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
@@ -75,7 +76,7 @@ export async function runBatch(options: BatchOptions) {
   let successful = 0;
   let notesWithRemoteImages = 0;
   for (const [index, entry] of entries.entries()) {
-    console.log(`[${index + 1}/${entries.length}] Processing ${entry.url}`);
+    logProgress(`[${index + 1}/${entries.length}] Processing ${entry.url}`);
     try {
       assertSafeUrl(entry.url);
       const result = await runUrlContentFormatter(
@@ -99,19 +100,21 @@ export async function runBatch(options: BatchOptions) {
     } catch (error) {
       const failure = `Line ${entry.line}: ${entry.url} — ${error instanceof Error ? error.message : String(error)}`;
       failures.push(failure);
-      console.error(failure);
+      logError(failure);
     }
   }
-  console.log(
+  logProgress(
     `Finished: ${successful} of ${entries.length} successful, ${failures.length} failure${failures.length === 1 ? '' : 's'}.`,
   );
   if (options.downloadImages) {
-    console.log(
+    logInfo(
       `Image downloads: ${successful - notesWithRemoteImages} notes fully local, ${notesWithRemoteImages} notes retain remote images.`,
     );
   }
   if (failures.length) {
-    console.error(`Failed URLs:\n${failures.join('\n')}`);
+    process.stderr.write(
+      `${failures.length} URL${failures.length === 1 ? '' : 's'} failed. See log: ${getLogFile()}\n`,
+    );
     process.exitCode = 1;
   }
 }

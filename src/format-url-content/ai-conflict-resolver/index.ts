@@ -1,6 +1,6 @@
 import { MINI_MODEL } from '../../shared/constants.ts';
 import { callOpenAI } from '../../shared/openai-client.ts';
-import { logInfo, logWarning } from '../../shared/utils.ts';
+import { logInfo, logWarning } from '../logger.ts';
 import type { RecipeCandidate, ReconciledRecipe } from '../types.ts';
 import { AI_SYSTEM_PROMPT } from './prompt.ts';
 import { MAX_AI_INPUT_LENGTH } from './constants.ts';

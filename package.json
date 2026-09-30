@@ -40,7 +40,8 @@
     "iconv-lite": "^0.7.3",
     "jsdom": "^29.1.1",
     "openai": "^6.42.0",
-    "turndown": "^7.2.4"
+    "turndown": "^7.2.4",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

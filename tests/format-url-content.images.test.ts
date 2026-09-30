@@ -373,6 +373,36 @@ describe('local recipe images', () => {
     ).toBe('Existing note');
   });
 
+  it('shows image download warnings in the terminal', async () => {
+    const output = path.join(directory, 'CLI.md');
+    const { stdout, stderr } = await promisify(execFile)(
+      process.execPath,
+      [
+        'src/format-url-content.ts',
+        '-i',
+        baseUrl + '/recipe?main=/missing',
+        '-o',
+        output,
+        '--no-ai',
+        '--download-images',
+        '--main-image-only',
+      ],
+      {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          FORMAT_URL_CONTENT_ALLOW_PRIVATE_HOSTS: '1',
+          FORMAT_URL_CONTENT_LOG_FILE: path.join(directory, 'cli.log'),
+        },
+      },
+    );
+    expect(stdout).toBe(`Saved to ${output}\n`);
+    expect(stderr).toContain('WARN: Could not download');
+    expect(await readFile(path.join(directory, 'cli.log'), 'utf8')).toContain(
+      '[WARN] Could not download',
+    );
+  });
+
   it('rejects paths for the images folder name before fetching', async () => {
     await expect(
       promisify(execFile)(

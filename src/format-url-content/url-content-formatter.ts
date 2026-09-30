@@ -9,7 +9,7 @@ import type {
   ReconciledRecipe,
 } from './types.ts';
 import type { AiResolutionResult } from './ai-conflict-resolver/types.ts';
-import { logInfo, logSuccess, logWarning } from '../shared/utils.ts';
+import { logInfo, logProgress, logSuccess, logWarning } from './logger.ts';
 import { parseRecipePage } from './parser/page-parser.ts';
 import { renderRecipeMarkdown } from './markdown/recipe-markdown-renderer.ts';
 import { buildFallbackMarkdown } from './markdown/fallback-markdown.ts';
@@ -180,11 +180,11 @@ async function handleOutput(
 
   if (output) {
     await writeFileAtomically(output, markdown);
-    logSuccess(`Saved to ${output}`);
+    logProgress(`Saved to ${output}`);
   } else {
-    logSuccess('Output sent to stdout.');
-    console.log(
-      JSON.stringify(
+    logSuccess('Diagnostic JSON sent to stdout.');
+    process.stdout.write(
+      `${JSON.stringify(
         {
           recipe: content.recipe,
           title: content.article?.title ?? null,
@@ -199,7 +199,7 @@ async function handleOutput(
         },
         null,
         2,
-      ),
+      )}\n`,
     );
   }
 }

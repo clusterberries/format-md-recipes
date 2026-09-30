@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fetchWithRetry } from './utils/http-fetch.ts';
 import { writeFileAtomically } from './utils/atomic-file.ts';
-import { logInfo, logWarning } from '../shared/utils.ts';
+import { logInfo, logWarning } from './logger.ts';
 import type { ExtractedImage, ReconciledRecipe } from './types.ts';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;

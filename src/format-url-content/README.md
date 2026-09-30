@@ -51,6 +51,8 @@ Notes end with a source link: the canonical HTTP(S) URL, or the final fetched UR
 
 Without `-o`, a single-page run prints diagnostic JSON. Files are written atomically. Images remain remote by default; `--download-images` saves rendered images beside the note in `attachments` (or `--images-folder`). The final note name and image content hash determine attachment names. Existing matching files are reused; failed downloads retain remote URLs.
 
+Run logs: `logs/format-url-content.log` (5 MB rotation; override with `FORMAT_URL_CONTENT_LOG_FILE`). The terminal shows progress, warnings, and errors; tests use temporary logs.
+
 Page and image requests share bounded fetching in `utils/http-fetch.ts`: timeouts, transient retries, redirect validation, and response size limits. Image downloads also have a per-recipe byte budget.
 
 ## Tests

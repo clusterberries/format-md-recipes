@@ -63,7 +63,7 @@ describe('format-url-content integration', () => {
   ): Promise<void> {
     const fixtureUrl = `http://127.0.0.1:${port}/${fixture}.html`;
 
-    await execFileAsync(
+    const { stdout } = await execFileAsync(
       process.execPath,
       [cliPath, '-i', fixtureUrl, '--no-ai', ...extraArgs, '-o', outputPath],
       {
@@ -73,9 +73,11 @@ describe('format-url-content integration', () => {
           ...process.env,
           // Fixture server runs on 127.0.0.1; opt into the SSRF guard's local-host allowance for tests only.
           FORMAT_URL_CONTENT_ALLOW_PRIVATE_HOSTS: '1',
+          FORMAT_URL_CONTENT_LOG_FILE: path.join(outputDirectory, 'import.log'),
         },
       },
     );
+    expect(stdout).toBe(`Saved to ${outputPath}\n`);
 
     const [actual, expected] = await Promise.all([
       readFile(outputPath, 'utf8'),
@@ -98,6 +100,37 @@ describe('format-url-content integration', () => {
         'redirect-recipe',
         path.join(fixturesDirectory, 'source-redirect.md'),
       );
+    },
+    testTimeout,
+  );
+
+  it(
+    'keeps diagnostic JSON on stdout and progress in the log file',
+    async () => {
+      const fixtureUrl = `http://127.0.0.1:${port}/basic-recipe-en.html`;
+      const { stdout } = await execFileAsync(
+        process.execPath,
+        [cliPath, '-i', fixtureUrl, '--no-ai'],
+        {
+          cwd: projectRoot,
+          timeout: cliTimeout,
+          env: {
+            ...process.env,
+            FORMAT_URL_CONTENT_ALLOW_PRIVATE_HOSTS: '1',
+            FORMAT_URL_CONTENT_LOG_FILE: path.join(
+              outputDirectory,
+              'import.log',
+            ),
+          },
+        },
+      );
+      expect(JSON.parse(stdout)).toMatchObject({ fallback: false });
+      const log = await readFile(
+        path.join(outputDirectory, 'import.log'),
+        'utf8',
+      );
+      expect(log).toContain(`Fetching page: ${fixtureUrl}`);
+      expect(log).toContain('Diagnostic JSON sent to stdout.');
     },
     testTimeout,
   );
