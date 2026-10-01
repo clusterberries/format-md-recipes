@@ -30,6 +30,7 @@ export const fixtures = [
   'seo-cleanup',
   'page-noise',
   'no-recipe-article',
+  'no-recipe-article-lang-ru',
   'sources-partial-overlap',
   'repeated-json-ld',
   'repeated-microdata',

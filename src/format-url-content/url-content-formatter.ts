@@ -13,7 +13,10 @@ import { logInfo, logProgress, logSuccess, logWarning } from './logger.ts';
 import { parseRecipePage } from './parser/page-parser.ts';
 import { renderRecipeMarkdown } from './markdown/recipe-markdown-renderer.ts';
 import { buildFallbackMarkdown } from './markdown/fallback-markdown.ts';
+import { getLanguage } from './markdown/language.ts';
+import { markdownTexts } from './markdown/texts.ts';
 import { resolveRecipeConflicts } from './ai-conflict-resolver/index.ts';
+import { getRecipeQualityIssue } from './recipe-quality.ts';
 
 export async function runUrlContentFormatter(
   options: CliOptions,
@@ -30,12 +33,25 @@ export async function runUrlContentFormatter(
     }
     let imageFailures = 0;
     const pageContent = await parseRecipePage(inputUrl);
-    const aiResult = await resolveConflicts(pageContent, noAi);
-    if (isRecipeIdentified(aiResult.recipe)) {
+    const aiResolution = await resolveConflicts(pageContent, noAi);
+    const qualityIssue =
+      !aiResolution.fallbackReason && isRecipeIdentified(aiResolution.recipe)
+        ? getRecipeQualityIssue(aiResolution.recipe)
+        : null;
+    const aiResult: AiResolutionResult = qualityIssue
+      ? { ...aiResolution, fallbackReason: qualityIssue }
+      : aiResolution;
+    const structuredRecipe =
+      isRecipeIdentified(aiResult.recipe) && !aiResult.fallbackReason;
+    if (structuredRecipe) {
       logInfo(
         mainImageOnly
           ? 'Image mode: main image only (step images skipped, main image at bottom).'
           : 'Image mode: all images (main image after title, step images inline).',
+      );
+    } else if (aiResult.fallbackReason) {
+      logWarning(
+        `Falling back to cleaned page content: ${aiResult.fallbackReason}.`,
       );
     } else {
       logInfo(
@@ -46,6 +62,8 @@ export async function runUrlContentFormatter(
       pageContent,
       aiResult.recipe,
       mainImageOnly,
+      structuredRecipe,
+      Boolean(aiResult.fallbackReason),
     );
 
     if (!markdown) {
@@ -58,7 +76,7 @@ export async function runUrlContentFormatter(
       if (!options.downloadImages) return markdown;
       const images = collectRenderedImages(
         aiResult.recipe,
-        isRecipeIdentified(aiResult.recipe) && !mainImageOnly,
+        structuredRecipe && !mainImageOnly,
       );
       const { destinations, failed } = await downloadRecipeImages(
         images,
@@ -70,16 +88,24 @@ export async function runUrlContentFormatter(
         pageContent,
         aiResult.recipe,
         mainImageOnly,
+        structuredRecipe,
+        Boolean(aiResult.fallbackReason),
         destinations,
       );
     };
     if (saveResult) {
-      await saveResult(aiResult.recipe.title.value ?? '', renderForOutput);
+      await saveResult(
+        (structuredRecipe
+          ? aiResult.recipe.title.value
+          : pageContent.article?.title || aiResult.recipe.title.value) ?? '',
+        renderForOutput,
+      );
     } else {
       await handleOutput(
         options,
         pageContent,
         aiResult,
+        structuredRecipe,
         options.output ? await renderForOutput(options.output) : markdown,
       );
     }
@@ -136,13 +162,18 @@ function generateMarkdown(
   content: ParsedRecipePage,
   recipe: ReconciledRecipe,
   mainImageOnly: boolean,
+  structuredRecipe: boolean,
+  preferRawFallback: boolean,
   imageDestinations?: ReadonlyMap<string, string>,
 ): string {
-  const originalContentHtml = content.article?.contentHtml?.trim() ?? '';
-  const recipeIdentified = isRecipeIdentified(recipe);
+  const originalContentHtml =
+    !structuredRecipe && preferRawFallback
+      ? content.rawHtml
+      : content.article?.contentHtml?.trim() ||
+        (!structuredRecipe ? content.rawHtml : '');
   const imagePosition = mainImageOnly ? 'bottom' : 'top';
 
-  const markdown = recipeIdentified
+  const markdown = structuredRecipe
     ? renderRecipeMarkdown(recipe, {
         imagePosition,
         includeStepImages: !mainImageOnly,
@@ -164,7 +195,7 @@ function generateMarkdown(
   ].find((url) => url && /^https?:\/\//i.test(url));
   // Angle brackets and encoded delimiters keep URL punctuation out of Markdown syntax.
   const sourceLink = source
-    ? '[Source](<' + source.replace(/[<>\s]/g, encodeURIComponent) + '>)'
+    ? `[${markdownTexts[getLanguage(recipe.sourceMetadata.language)].source}](<${source.replace(/[<>\s]/g, encodeURIComponent)}>)`
     : '';
   return [markdown, sourceLink].filter(Boolean).join('\n\n');
 }
@@ -173,10 +204,10 @@ async function handleOutput(
   options: CliOptions,
   content: ParsedRecipePage,
   aiResult: AiResolutionResult,
+  structuredRecipe: boolean,
   markdown: string,
 ) {
   const { output } = options;
-  const recipeIdentified = isRecipeIdentified(aiResult.recipe);
 
   if (output) {
     await writeFileAtomically(output, markdown);
@@ -194,7 +225,7 @@ async function handleOutput(
           normalizedRecipe: content.normalizedRecipe,
           reconciledRecipe: aiResult.recipe,
           ai: aiResult,
-          fallback: !recipeIdentified,
+          fallback: !structuredRecipe,
           content: markdown ? `${markdown.slice(0, 100)}...` : null,
         },
         null,

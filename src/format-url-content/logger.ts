@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inspect } from 'node:util';
 import winston from 'winston';
 
 export function getLogFile(): string {
@@ -64,25 +65,38 @@ export function isConsoleLoggingEnabled(): boolean {
   return consoleLoggingEnabled;
 }
 
-export function logInfo(message: string): void {
-  getLogger().info(message);
+function withDetails(message: string, details?: unknown): string {
+  if (details === undefined) return message;
+  if (details instanceof Error)
+    return `${message}\n${inspect(details, { depth: null, colors: false })}`;
+  try {
+    const json = JSON.stringify(details, null, 2);
+    if (json !== undefined) return `${message}\n${json}`;
+  } catch {
+    // Circular references and BigInt cannot be serialized as JSON.
+  }
+  return `${message}\n${inspect(details, { depth: null, colors: false })}`;
 }
 
-export function logProgress(message: string): void {
-  logInfo(message);
+export function logInfo(message: string, details?: unknown): void {
+  getLogger().info(withDetails(message, details));
+}
+
+export function logProgress(message: string, details?: unknown): void {
+  logInfo(message, details);
   if (consoleLoggingEnabled) process.stdout.write(`${message}\n`);
 }
 
-export function logWarning(message: string): void {
-  getLogger().warn(message);
+export function logWarning(message: string, details?: unknown): void {
+  getLogger().warn(withDetails(message, details));
 }
 
-export function logSuccess(message: string): void {
-  getLogger().info(message);
+export function logSuccess(message: string, details?: unknown): void {
+  getLogger().info(withDetails(message, details));
 }
 
-export function logError(message: string): void {
-  getLogger().error(message);
+export function logError(message: string, details?: unknown): void {
+  getLogger().error(withDetails(message, details));
 }
 
 export async function closeLogger(): Promise<void> {

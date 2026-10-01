@@ -1,5 +1,6 @@
 import TurndownService from 'turndown';
 import type { RecipeImage } from '../images-parser/types.ts';
+import { markdownTexts } from './texts.ts';
 
 export type MarkdownImagePosition = 'top' | 'bottom';
 
@@ -17,7 +18,7 @@ export function convertRecipeHtmlToMarkdown(
   const {
     mainImage,
     imagePosition = 'top',
-    imageAlt = 'Recipe image',
+    imageAlt = markdownTexts.en.imageAlt,
     keepLinks = false,
   } = options;
 

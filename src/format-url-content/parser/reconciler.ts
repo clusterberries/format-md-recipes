@@ -27,7 +27,7 @@ export function reconcileRecipe(recipe: NormalizedRecipe): ReconciledRecipe {
   const prepTime = reconcileScalar(recipe.prepTime, 'prepTime');
   const cookTime = reconcileScalar(recipe.cookTime, 'cookTime');
   const totalTime = reconcileScalar(recipe.totalTime, 'totalTime');
-  const ingredients = reconcileIngredients(recipe.ingredients);
+  const ingredients = reconcileIngredients(recipe.ingredients, title.value);
   const instructions = reconcileInstructions(recipe.instructions);
 
   return {
@@ -88,6 +88,7 @@ function reconcileScalar<T>(
 
 function reconcileIngredients(
   ingredients: ExtractedIngredient[],
+  title: string | null,
 ): ReconciledCollection<ExtractedIngredient> {
   const groups = groupBySource(ingredients);
   const orderedGroups = [...groups.entries()].sort((a, b) =>
@@ -95,7 +96,10 @@ function reconcileIngredients(
   );
   const selected = orderedGroups[0]?.[1] ?? [];
   const alternatives = orderedGroups.slice(1).map(([, values]) => values);
-  const merged = mergeCompatibleIngredients(selected, ingredients);
+  const merged = organizeIngredientGroups(
+    mergeCompatibleIngredients(selected, ingredients),
+    title,
+  );
   const conflicts: CollectionConflict<ExtractedIngredient>[] = alternatives
     .filter((group) => !sameIngredientCollection(group, selected))
     .map((group) => ({
@@ -113,6 +117,36 @@ function reconcileIngredients(
     conflicts,
     selectionReason: selected.length ? 'most-complete-source' : null,
   };
+}
+
+function organizeIngredientGroups(
+  ingredients: ExtractedIngredient[],
+  title: string | null,
+): ExtractedIngredient[] {
+  const normalizedTitle = title ? normalizeIngredientName(title) : '';
+  const result: ExtractedIngredient[] = [];
+  let group = '';
+  let groupSource: ExtractedIngredient['source'] | null = null;
+  for (const ingredient of ingredients) {
+    const text = ingredient.text.trim();
+    if (
+      normalizedTitle.length > 20 &&
+      ingredients.length > 1 &&
+      normalizeIngredientName(text) === normalizedTitle
+    )
+      continue;
+    if (/^[^\d:]{1,80}:\s*$/u.test(text)) {
+      group = text.slice(0, -1).trim();
+      groupSource = ingredient.source;
+      continue;
+    }
+    result.push(
+      group && groupSource === ingredient.source && !ingredient.group
+        ? { ...ingredient, group }
+        : ingredient,
+    );
+  }
+  return result;
 }
 
 function reconcileInstructions(
@@ -183,8 +217,21 @@ function mergeCompatibleIngredients(
     if (source === selected[0]?.source) continue;
     // Match occurrences one-to-one so repeated entries within a source survive.
     const matched = new Set<number>();
+    const coverage = selected.flatMap((item) =>
+      ingredientCoverageSlots(item.text),
+    );
     for (const ingredient of ingredients) {
       if (isAggregateIngredient(ingredient, selected)) continue;
+      if (isBareIngredientName(ingredient)) {
+        const name = normalizeIngredientName(ingredient.text);
+        const slot = coverage.find(
+          (candidate) => !candidate.used && candidate.names.includes(name),
+        );
+        if (slot) {
+          slot.used = true;
+          continue;
+        }
+      }
       const index = result.findIndex(
         (item, index) =>
           !matched.has(index) && sameIngredientName(item, ingredient),
@@ -200,6 +247,33 @@ function mergeCompatibleIngredients(
     }
   }
   return result;
+}
+
+function isBareIngredientName(ingredient: ExtractedIngredient): boolean {
+  return (
+    !ingredient.quantity &&
+    !ingredient.unit &&
+    !/\d/u.test(ingredient.text) &&
+    !/\s[-–—]\s/u.test(ingredient.text)
+  );
+}
+
+function ingredientCoverageSlots(
+  text: string,
+): { names: string[]; used: boolean }[] {
+  const [namePart = '', amountPart = ''] = text.split(/\s[-–—]\s/u, 2);
+  const trailingQualifier = amountPart.match(/\(([^)]*)\)\s*$/u)?.[1];
+  return namePart.split(',').map((part) => {
+    const base = normalizeIngredientName(part);
+    const qualified = trailingQualifier
+      ? normalizeIngredientName(`${part} ${trailingQualifier}`)
+      : base;
+    return { names: [...new Set([base, qualified])], used: false };
+  });
+}
+
+function normalizeIngredientName(text: string): string {
+  return normalize(text.replace(/[^\p{L}\p{N}]+/gu, ' '));
 }
 
 function isAggregateIngredient(

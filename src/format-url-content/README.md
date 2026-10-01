@@ -36,8 +36,8 @@ npm run format-url-content -- --input-file urls.txt --dest Recipes --download-im
 2. `parser/page-parser.ts` fetches and decodes HTML, reads metadata, and runs Readability for article fallback.
 3. `source-extractor/` extracts JSON-LD, microdata, HTML, and form values. `field-extractor/` normalizes fields and associates step images.
 4. `parser/reconciler.ts` compares complete source collections. Scalars prefer structured sources; collections prefer completeness, then source priority. Ingredients can be supplemented from other sources. Repetitions within a collection are preserved.
-5. `ai-conflict-resolver/` optionally selects, merges, or filters extracted values when sources disagree. `--no-ai` skips it; invalid responses and API failures retain the deterministic result.
-6. `markdown/` renders the recipe. If ingredients or instructions are missing, it renders cleaned article content instead. `url-content-formatter.ts` coordinates rendering and saving.
+5. `ai-conflict-resolver/` optionally selects, merges, or filters extracted values when sources disagree. `--no-ai` skips it; invalid responses and API failures retain the deterministic result. Unresolved ingredients or instructions trigger article fallback.
+6. `markdown/` renders the recipe. If ingredients or instructions are missing or visibly malformed, it renders cleaned page content instead. `url-content-formatter.ts` coordinates rendering and saving. Known Google AMP wrappers and HTML redirect notices are followed to the destination; notices without a usable destination fail rather than becoming recipe notes.
 
 ## Selection rules
 

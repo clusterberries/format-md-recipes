@@ -31,4 +31,5 @@ export interface AiResolutionResult {
   called: boolean;
   applied: boolean;
   reasons: string[];
+  fallbackReason?: string;
 }

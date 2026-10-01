@@ -4,12 +4,12 @@
 
 Так аппетитно, красиво. Не оторваться до последнего кусочка!
 
-## Metadata
+## Метаданные
 
 - Порции: 5
 - Общее время: PT50M
 
-## Ingredients
+## Ингредиенты
 - Картошка - 1 кг
 - Перец красный молотый - 0.5 чайн.л.
 - Перец черный молотый - 0.5 чайн.л.
@@ -19,7 +19,7 @@
 - Чеснок - 2 зубч.
 - Зелень - по вкусу
 
-## Instructions
+## Приготовление
 1. Как запечь мелкую молодую картошку в духовке в кожуре целиком? Подготовьте все необходимые ингредиенты.
 
    ![Шаг 1.](http://assets.recipe-source.example/res/380/img/content-v2/69/ea/42474/melkaya-kartoshka-v-duxovke-v-kojure_1579113174_1_max.jpg)
@@ -63,4 +63,4 @@
 
    ![Шаг 14.](http://assets.recipe-source.example/res/380/img/content-v2/69/ea/42474/melkaya-kartoshka-v-duxovke-v-kojure_1579244377_14_max.jpg)
 
-[Source](<https://recipe-source.example/cooking/42474-melkaya-kartoshka-v-duxovke-v-kojure>)
+[Источник](<https://recipe-source.example/cooking/42474-melkaya-kartoshka-v-duxovke-v-kojure>)

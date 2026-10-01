@@ -4,7 +4,8 @@ import type {
   ReconciledRecipe,
 } from '../types.ts';
 import { convertRecipeHtmlToMarkdown } from './markdown-converter.ts';
-import { getDefaultImageAlt, getLanguage, type Language } from './language.ts';
+import { getLanguage, type Language } from './language.ts';
+import { markdownTexts } from './texts.ts';
 
 export type RecipeMarkdownOptions = {
   imagePosition?: 'top' | 'bottom';
@@ -19,12 +20,13 @@ export function renderRecipeMarkdown(
   const imagePosition = options.imagePosition ?? 'top';
   const includeStepImages = options.includeStepImages ?? true;
   const language = getLanguage(recipe.sourceMetadata.language);
+  const texts = markdownTexts[language];
   const sections: string[] = [];
-  const title = recipe.title.value ?? 'Recipe';
+  const title = recipe.title.value ?? texts.recipe;
   const mainImage = recipe.mainImage
     ? renderImage(
         recipe.mainImage,
-        getDefaultImageAlt(language),
+        texts.imageAlt,
         language,
         options.imageDestinations,
       )
@@ -38,15 +40,16 @@ export function renderRecipeMarkdown(
     : '';
   if (description) sections.push(description);
 
-  const metadata = renderMetadata(recipe);
+  const metadata = renderMetadata(recipe, texts);
   if (metadata) sections.push(metadata);
 
-  const ingredients = renderIngredients(recipe.ingredients.value);
+  const ingredients = renderIngredients(recipe.ingredients.value, texts);
   if (ingredients) sections.push(ingredients);
 
   const instructions = renderInstructions(
     recipe.instructions.value,
     language,
+    texts,
     includeStepImages,
     options.imageDestinations,
   );
@@ -57,7 +60,7 @@ export function renderRecipeMarkdown(
       .map((note) => convertRecipeHtmlToMarkdown(note.value))
       .filter(Boolean)
       .join('\n\n');
-    if (notes) sections.push(`## Notes\n\n${notes}`);
+    if (notes) sections.push(`## ${texts.sections.notes}\n\n${notes}`);
   }
 
   if (imagePosition === 'bottom' && mainImage) sections.push(mainImage);
@@ -65,9 +68,11 @@ export function renderRecipeMarkdown(
   return sections.filter(Boolean).join('\n\n').trim();
 }
 
-function renderMetadata(recipe: ReconciledRecipe): string {
-  const lang = getLanguage(recipe.sourceMetadata.language);
-  const labels = getMetadataLabels(lang);
+function renderMetadata(
+  recipe: ReconciledRecipe,
+  texts: (typeof markdownTexts)[Language],
+): string {
+  const labels = texts.metadata;
   const lines = [
     formatMetadataLine(labels.servings, recipe.servings.value),
     formatMetadataLine(labels.preparationTime, recipe.prepTime.value),
@@ -75,40 +80,22 @@ function renderMetadata(recipe: ReconciledRecipe): string {
     formatMetadataLine(labels.totalTime, recipe.totalTime.value),
   ].filter(Boolean);
 
-  return lines.length ? `## Metadata\n\n${lines.join('\n')}` : '';
+  return lines.length
+    ? `## ${texts.sections.metadata}\n\n${lines.join('\n')}`
+    : '';
 }
 
 function formatMetadataLine(label: string, value: string | null): string {
   return value ? `- ${label}: ${escapeListText(value)}` : '';
 }
 
-function getMetadataLabels(language: Language): {
-  servings: string;
-  preparationTime: string;
-  cookingTime: string;
-  totalTime: string;
-} {
-  if (language === 'ru') {
-    return {
-      servings: 'Порции',
-      preparationTime: 'Время подготовки',
-      cookingTime: 'Время приготовления',
-      totalTime: 'Общее время',
-    };
-  }
-
-  return {
-    servings: 'Servings',
-    preparationTime: 'Preparation time',
-    cookingTime: 'Cooking time',
-    totalTime: 'Total time',
-  };
-}
-
-function renderIngredients(ingredients: ExtractedIngredient[]): string {
+function renderIngredients(
+  ingredients: ExtractedIngredient[],
+  texts: (typeof markdownTexts)[Language],
+): string {
   if (!ingredients.length) return '';
 
-  const lines: string[] = ['## Ingredients'];
+  const lines: string[] = [`## ${texts.sections.ingredients}`];
   let currentGroup: string | undefined;
 
   for (const ingredient of ingredients) {
@@ -124,20 +111,18 @@ function renderIngredients(ingredients: ExtractedIngredient[]): string {
 
 function renderInstructions(
   instructions: ReconciledRecipe['instructions']['value'],
-  language: Language = 'en',
+  language: Language,
+  texts: (typeof markdownTexts)[Language],
   includeStepImages = true,
   imageDestinations?: ReadonlyMap<string, string>,
 ): string {
   if (!instructions.length) return '';
 
-  const lines: string[] = ['## Instructions'];
+  const lines: string[] = [`## ${texts.sections.instructions}`];
   instructions.forEach((instruction, index) => {
     lines.push(`${index + 1}. ${escapeListText(instruction.text)}`);
     if (includeStepImages && instruction.image) {
-      const fallbackAlt =
-        language === 'ru'
-          ? `Шаг ${instruction.stepIndex + 1}`
-          : `Step ${instruction.stepIndex + 1}`;
+      const fallbackAlt = texts.stepImageAlt(instruction.stepIndex + 1);
       lines.push(
         '',
         `   ${renderImage(instruction.image, fallbackAlt, language, imageDestinations)}`,
@@ -154,7 +139,7 @@ export function renderImage(
   language: Language = 'en',
   imageDestinations?: ReadonlyMap<string, string>,
 ): string {
-  const actualFallback = getDefaultImageAlt(language);
+  const actualFallback = markdownTexts[language].imageAlt;
   let altSource =
     image.role === 'main'
       ? fallbackAlt || actualFallback

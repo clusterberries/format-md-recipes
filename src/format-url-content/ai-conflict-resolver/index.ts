@@ -30,6 +30,8 @@ export async function resolveRecipeConflicts(
     return { recipe, called: false, applied: false, reasons };
   }
 
+  logInfo('Built AI payload.', payload);
+
   try {
     logInfo(`Calling AI (${MINI_MODEL}) to resolve recipe conflicts...`);
     const requestOptions = {
@@ -55,6 +57,29 @@ export async function resolveRecipeConflicts(
         'AI conflict resolution retry returned an invalid response. Using deterministic result.',
       );
       return { recipe, called: true, applied: false, reasons };
+    }
+
+    logInfo('AI conflict resolution returned a valid decision.', decision);
+
+    const unresolvedCollections = (
+      ['ingredients', 'instructions'] as const
+    ).filter(
+      (field) =>
+        decision.fields?.[field]?.action === 'unresolved' ||
+        decision.unresolved?.includes(field),
+    );
+    if (unresolvedCollections.length) {
+      const fallbackReason = `AI could not resolve ${unresolvedCollections.join(' and ')}`;
+      logWarning(
+        `${fallbackReason}. Keeping the page content for later cleanup.`,
+      );
+      return {
+        recipe,
+        called: true,
+        applied: false,
+        reasons,
+        fallbackReason,
+      };
     }
 
     const resolved = applyDecision(recipe, decision);

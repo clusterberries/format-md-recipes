@@ -176,9 +176,9 @@ describe('local recipe images', () => {
     expect(imageLinks(markdown)).toHaveLength(1);
     expect(requests).not.toContain('/step');
     expect(markdown.trim()).toMatch(
-      /!\[[^\]]+\]\([^)]+\)\n\n\[Source\]\(<[^>]+>\)$/,
+      /!\[[^\]]+\]\([^)]+\)\n\n\[Источник\]\(<[^>]+>\)$/,
     );
-    expect(markdown).toContain(`[Source](<${baseUrl}/recipe>)`);
+    expect(markdown).toContain(`[Источник](<${baseUrl}/recipe>)`);
   });
 
   it('keeps remote mode unchanged and makes no image requests', async () => {

@@ -2,7 +2,8 @@ import type { ReconciledRecipe } from '../types.ts';
 import { cleanRecipeContent } from '../html-cleaner/index.ts';
 import { convertRecipeHtmlToMarkdown } from './markdown-converter.ts';
 import { renderImage } from './recipe-markdown-renderer.ts';
-import { getDefaultImageAlt, getLanguage } from './language.ts';
+import { getLanguage } from './language.ts';
+import { markdownTexts } from './texts.ts';
 
 export function buildFallbackMarkdown(
   originalContentHtml: string,
@@ -22,7 +23,7 @@ export function buildFallbackMarkdown(
   const mainImage = recipe.mainImage
     ? renderImage(
         recipe.mainImage,
-        getDefaultImageAlt(language),
+        markdownTexts[language].imageAlt,
         language,
         imageDestinations,
       )

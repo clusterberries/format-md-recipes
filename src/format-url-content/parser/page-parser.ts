@@ -6,18 +6,16 @@ import { extractIndependentSources } from '../source-extractor/index.ts';
 import { extractNormalizedRecipe } from '../field-extractor/index.ts';
 import { reconcileRecipe } from './reconciler.ts';
 import { logInfo } from '../logger.ts';
+import { assertSafeUrl } from '../utils/url-guard.ts';
+import {
+  inspectRedirectNotice,
+  unwrapKnownRedirectUrl,
+} from './redirect-notice.ts';
 import type { ParsedRecipePage } from '../types.ts';
 
 export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
-  logInfo(`Fetching page: ${url}`);
-  const { response, buffer, contentType } = await fetchPageWithRetry(url);
-  logInfo(
-    `Page fetched (${buffer.byteLength} bytes, content-type: ${contentType ?? 'unknown'})`,
-  );
-
-  const { html, encoding } = decodePageHtml(buffer, contentType);
-  const finalUrl = response.url || url;
-  const dom = new JSDOM(html, { url: finalUrl });
+  const { html, encoding, contentType, finalUrl, dom } =
+    await fetchRecipePage(url);
 
   const metadata = extractPageMetadata(
     dom.window.document,
@@ -78,4 +76,41 @@ export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
     normalizedRecipe,
     reconciledRecipe,
   };
+}
+
+async function fetchRecipePage(requestedUrl: string) {
+  let fetchUrl = assertSafeUrl(unwrapKnownRedirectUrl(requestedUrl)).href;
+  if (fetchUrl !== requestedUrl)
+    logInfo(`Following embedded page URL: ${fetchUrl}`);
+
+  const visited = new Set<string>();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (visited.has(fetchUrl))
+      throw new Error(`Redirect notice loop while fetching ${requestedUrl}`);
+    visited.add(fetchUrl);
+
+    logInfo(`Fetching page: ${fetchUrl}`);
+    const { response, buffer, contentType } =
+      await fetchPageWithRetry(fetchUrl);
+    logInfo(
+      `Page fetched (${buffer.byteLength} bytes, content-type: ${contentType ?? 'unknown'})`,
+    );
+
+    const { html, encoding } = decodePageHtml(buffer, contentType);
+    const finalUrl = response.url || fetchUrl;
+    const dom = new JSDOM(html, { url: finalUrl });
+    const notice = inspectRedirectNotice(dom.window.document, finalUrl);
+    if (!notice.isNotice) return { html, encoding, contentType, finalUrl, dom };
+
+    if (!notice.target || attempt === 1)
+      throw new Error(
+        `Received a redirect notice instead of a recipe page: ${finalUrl}`,
+      );
+    fetchUrl = assertSafeUrl(notice.target).href;
+    logInfo(`Following redirect notice to ${fetchUrl}`);
+  }
+
+  throw new Error(
+    `Received a redirect notice instead of a recipe page: ${requestedUrl}`,
+  );
 }
