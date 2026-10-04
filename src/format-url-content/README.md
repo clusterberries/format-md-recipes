@@ -14,7 +14,7 @@ npm run format-url-content -- -i <url> [options]
 - `--input-file <file>` — Read a UTF-8 file containing one URL per line.
 - `-o, --output <file>` — Save a single recipe as Markdown; omit to print diagnostic JSON.
 - `-d, --dest <folder>` — Output directory for `--input-file`.
-- `--no-ai` — Disable AI conflict resolution.
+- `--no-ai` — Disable AI conflict resolution and AI note formatting.
 - `--main-image-only` — Skip step images and place the main image at the bottom.
 - `--download-images` — Save rendered images locally; requires `--output` or batch `--dest`.
 - `--images-folder <name>` — Folder beside the notes for downloaded images; default `attachments`. Use a folder name, not a path.
@@ -38,6 +38,7 @@ npm run format-url-content -- --input-file urls.txt --dest Recipes --download-im
 4. `parser/reconciler.ts` compares complete source collections. Scalars prefer structured sources; collections prefer completeness, then source priority. Ingredients can be supplemented from other sources. Repetitions within a collection are preserved.
 5. `ai-conflict-resolver/` optionally selects, merges, or filters extracted values when sources disagree. `--no-ai` skips it; invalid responses and API failures retain the deterministic result. Unresolved ingredients or instructions trigger article fallback.
 6. `markdown/` renders the recipe. If ingredients or instructions are missing or visibly malformed, it renders cleaned page content instead. `url-content-formatter.ts` coordinates rendering and saving. Known Google AMP wrappers and HTML redirect notices are followed to the destination; notices without a usable destination fail rather than becoming recipe notes.
+7. `ai-formatter/` optionally rewrites the saved note as a Russian Obsidian recipe: a cheap model rates the complexity, which picks the model that removes page noise and adds `tags` and `ингредиенты` frontmatter. Output that loses an image, a section, or the frontmatter, and API failures, keep the unformatted Markdown. The source link is appended afterwards. It runs only when saving to a file, not for the stdout diagnostic, and `--no-ai` skips it.
 
 ## Selection rules
 

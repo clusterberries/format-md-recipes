@@ -111,20 +111,25 @@ describe('recipe content safety', () => {
   }
 
   it('keeps intact article content when instructions are unresolved', async () => {
-    vi.mocked(callOpenAI).mockResolvedValue(
-      JSON.stringify({
-        fields: {
-          ingredients: {
-            action: 'filter',
-            dropTexts: ['Keep the resting liquid for the soup.'],
+    vi.mocked(callOpenAI)
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          fields: {
+            ingredients: {
+              action: 'filter',
+              dropTexts: ['Keep the resting liquid for the soup.'],
+            },
+            instructions: { action: 'unresolved' },
           },
-          instructions: { action: 'unresolved' },
-        },
-        unresolved: ['instructions'],
-      }),
-    );
+          unresolved: ['instructions'],
+        }),
+      )
+      // Scout verdict for the note-formatting step, which then leaves the note unchanged.
+      .mockResolvedValueOnce(
+        JSON.stringify({ isRecipe: false, complexity: 'simple', reason: 'x' }),
+      );
     const markdown = await run('/recipe', false);
-    expect(callOpenAI).toHaveBeenCalledOnce();
+    expect(callOpenAI).toHaveBeenCalledTimes(2);
     expect(markdown).toContain('keep the resting liquid for the soup');
     expect(markdown).not.toContain('## Ingredients');
   });

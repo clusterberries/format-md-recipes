@@ -47,7 +47,7 @@ export function parseOptions(): CliOptions | BatchOptions {
       'images folder name beside the notes (used with --download-images)',
       DEFAULT_IMAGES_FOLDER,
     )
-    .option('--no-ai', 'disable conditional AI conflict resolution')
+    .option('--no-ai', 'disable AI conflict resolution and AI note formatting')
     .option(
       '--main-image-only',
       'include only the main image (skip step images); main image is placed at the bottom',

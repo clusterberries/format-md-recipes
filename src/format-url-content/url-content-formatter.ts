@@ -16,6 +16,7 @@ import { buildFallbackMarkdown } from './markdown/fallback-markdown.ts';
 import { getLanguage } from './markdown/language.ts';
 import { markdownTexts } from './markdown/texts.ts';
 import { resolveRecipeConflicts } from './ai-conflict-resolver/index.ts';
+import { formatRecipeNote } from './ai-formatter/index.ts';
 import { getRecipeQualityIssue } from './recipe-quality.ts';
 
 export async function runUrlContentFormatter(
@@ -58,13 +59,15 @@ export async function runUrlContentFormatter(
         'Could not identify recipe (missing ingredients/instructions). Falling back to cleaned page content.',
       );
     }
-    const markdown = generateMarkdown(
+    const body = generateBody(
       pageContent,
       aiResult.recipe,
       mainImageOnly,
       structuredRecipe,
       Boolean(aiResult.fallbackReason),
     );
+    const sourceLink = buildSourceLink(aiResult.recipe);
+    const markdown = joinNote(body, sourceLink);
 
     if (!markdown) {
       if (saveResult) throw new Error('No content or recipe found.');
@@ -73,25 +76,32 @@ export async function runUrlContentFormatter(
     }
 
     const renderForOutput = async (output: string): Promise<string> => {
-      if (!options.downloadImages) return markdown;
-      const images = collectRenderedImages(
-        aiResult.recipe,
-        structuredRecipe && !mainImageOnly,
-      );
-      const { destinations, failed } = await downloadRecipeImages(
-        images,
-        output,
-        options.imagesFolder,
-      );
-      imageFailures = failed;
-      return generateMarkdown(
-        pageContent,
-        aiResult.recipe,
-        mainImageOnly,
-        structuredRecipe,
-        Boolean(aiResult.fallbackReason),
-        destinations,
-      );
+      let finalBody = body;
+      if (options.downloadImages) {
+        const images = collectRenderedImages(
+          aiResult.recipe,
+          structuredRecipe && !mainImageOnly,
+        );
+        const { destinations, failed } = await downloadRecipeImages(
+          images,
+          output,
+          options.imagesFolder,
+        );
+        imageFailures = failed;
+        finalBody = generateBody(
+          pageContent,
+          aiResult.recipe,
+          mainImageOnly,
+          structuredRecipe,
+          Boolean(aiResult.fallbackReason),
+          destinations,
+        );
+      }
+      if (!noAi && finalBody) {
+        // The source link is appended afterwards so the model cannot alter it.
+        finalBody = await formatRecipeNote(finalBody);
+      }
+      return joinNote(finalBody, sourceLink);
     };
     if (saveResult) {
       await saveResult(
@@ -124,7 +134,7 @@ async function resolveConflicts(
 ): Promise<AiResolutionResult> {
   if (noAi) {
     logInfo(
-      'AI conflict resolution disabled (--no-ai). Using deterministic result.',
+      'AI disabled (--no-ai). Skipping conflict resolution and note formatting.',
     );
     return {
       recipe: content.reconciledRecipe,
@@ -158,7 +168,7 @@ function isRecipeIdentified(recipe: ReconciledRecipe): boolean {
   );
 }
 
-function generateMarkdown(
+function generateBody(
   content: ParsedRecipePage,
   recipe: ReconciledRecipe,
   mainImageOnly: boolean,
@@ -186,18 +196,23 @@ function generateMarkdown(
         imagePosition,
         imageDestinations,
       );
-  if (!markdown) return '';
+  return markdown;
+}
 
+function buildSourceLink(recipe: ReconciledRecipe): string {
   const source = [
     recipe.sourceMetadata.canonicalUrl,
     recipe.sourceMetadata.finalUrl,
     recipe.sourceMetadata.requestedUrl,
   ].find((url) => url && /^https?:\/\//i.test(url));
   // Angle brackets and encoded delimiters keep URL punctuation out of Markdown syntax.
-  const sourceLink = source
+  return source
     ? `[${markdownTexts[getLanguage(recipe.sourceMetadata.language)].source}](<${source.replace(/[<>\s]/g, encodeURIComponent)}>)`
     : '';
-  return [markdown, sourceLink].filter(Boolean).join('\n\n');
+}
+
+function joinNote(body: string, sourceLink: string): string {
+  return body ? [body, sourceLink].filter(Boolean).join('\n\n') : '';
 }
 
 async function handleOutput(

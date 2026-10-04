@@ -11,7 +11,7 @@ import { callOpenAI } from '../shared/openai-client.ts';
 import {
   buildFormattingPlan,
   parseClassificationResult,
-} from './model-routing.ts';
+} from '../shared/model-routing.ts';
 import { MINI_MODEL } from '../shared/constants.ts';
 import type { CliOptions } from './types.ts';
 import { logWarning } from '../shared/utils.ts';

@@ -1,5 +1,12 @@
-import { FULL_MODEL, MINI_MODEL, MEDIUM_MODEL } from '../shared/constants.ts';
-import type { ClassificationResult, Complexity } from './types.ts';
+import { FULL_MODEL, MINI_MODEL, MEDIUM_MODEL } from './constants.ts';
+
+export type Complexity = 'simple' | 'moderate' | 'complex';
+
+export interface ClassificationResult {
+  isRecipe: boolean;
+  complexity: Complexity;
+  reason: string;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
