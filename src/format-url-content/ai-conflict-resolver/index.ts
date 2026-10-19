@@ -38,28 +38,28 @@ export async function resolveRecipeConflicts(
       systemPrompt: AI_SYSTEM_PROMPT,
       maxCompletionTokens: 1200,
     };
-    let decision = parseDecision(
-      await callOpenAI(payload, MINI_MODEL, requestOptions),
-    );
+    let response = await callOpenAI(payload, MINI_MODEL, requestOptions);
+    let decision = parseDecision(response);
     if (!decision) {
       logWarning(
         'AI conflict resolution returned an invalid response. Retrying once.',
+        { response },
       );
-      decision = parseDecision(
-        await callOpenAI(payload, MINI_MODEL, {
-          ...requestOptions,
-          systemPrompt: `${AI_SYSTEM_PROMPT}\n\nYour previous response could not be parsed. Return only a corrected JSON object that follows the required response format.`,
-        }),
-      );
+      response = await callOpenAI(payload, MINI_MODEL, {
+        ...requestOptions,
+        systemPrompt: `${AI_SYSTEM_PROMPT}\n\nYour previous response could not be parsed. Return only a corrected JSON object that follows the required response format.`,
+      });
+      decision = parseDecision(response);
     }
     if (!decision) {
       logWarning(
         'AI conflict resolution retry returned an invalid response. Using deterministic result.',
+        { response },
       );
       return { recipe, called: true, applied: false, reasons };
     }
 
-    logInfo('AI conflict resolution returned a valid decision.', decision);
+    logInfo('AI conflict resolution returned a valid decision.');
 
     const unresolvedCollections = (
       ['ingredients', 'instructions'] as const

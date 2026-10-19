@@ -1,9 +1,9 @@
 import { RECIPE_TAGS } from '../../shared/recipe-prompt-parts.ts';
+import { IMAGE_PATTERN } from './image-placeholders.ts';
 
 export type FormattedNoteResult = { markdown: string } | { issue: string };
 
 const FRONTMATTER_PATTERN = /^---\n([\s\S]*?)\n---[ \t]*(?:\n|$)/;
-const IMAGE_TARGET_PATTERN = /!\[[^\]]*\]\(([^)]*)\)/g;
 const REQUIRED_HEADINGS = ['## Ингредиенты', '## Приготовление'];
 const ALLOWED_TAGS: ReadonlySet<string> = new Set(RECIPE_TAGS);
 
@@ -76,7 +76,7 @@ function unique(items: string[]): string[] {
 }
 
 function getImageTargets(markdown: string): string[] {
-  return Array.from(markdown.matchAll(IMAGE_TARGET_PATTERN), (match) =>
-    (match[1] ?? '').trim(),
+  return Array.from(markdown.matchAll(IMAGE_PATTERN), (match) =>
+    (match[2] ?? '').trim(),
   );
 }

@@ -10,12 +10,14 @@ import {
   MAX_FORMAT_INPUT_LENGTH,
   SCOUT_MAX_COMPLETION_TOKENS,
 } from './constants.ts';
+import { maskImageTargets } from './image-placeholders.ts';
 import { FORMAT_SYSTEM_PROMPT, SCOUT_SYSTEM_PROMPT } from './prompt.ts';
 import { validateFormattedNote } from './validation.ts';
 
 /** Returns the AI-formatted note, or the input unchanged when formatting is not possible. */
 export async function formatRecipeNote(markdown: string): Promise<string> {
-  if (markdown.length > MAX_FORMAT_INPUT_LENGTH) {
+  const { masked, restore } = maskImageTargets(markdown);
+  if (masked.length > MAX_FORMAT_INPUT_LENGTH) {
     logWarning(
       `AI formatting skipped: content exceeds ${MAX_FORMAT_INPUT_LENGTH} characters.`,
     );
@@ -24,7 +26,7 @@ export async function formatRecipeNote(markdown: string): Promise<string> {
 
   try {
     const classification = parseClassificationResult(
-      await callOpenAI(markdown, MINI_MODEL, {
+      await callOpenAI(masked, MINI_MODEL, {
         systemPrompt: SCOUT_SYSTEM_PROMPT,
         maxCompletionTokens: SCOUT_MAX_COMPLETION_TOKENS,
       }),
@@ -41,11 +43,11 @@ export async function formatRecipeNote(markdown: string): Promise<string> {
       `Formatting note with AI (${plan.model}, complexity: ${plan.complexity}).`,
     );
     const result = validateFormattedNote(
-      await callOpenAI(markdown, plan.model, {
+      await callOpenAI(masked, plan.model, {
         systemPrompt: FORMAT_SYSTEM_PROMPT,
         maxCompletionTokens: FORMAT_MAX_COMPLETION_TOKENS,
       }),
-      markdown,
+      masked,
     );
     if ('issue' in result) {
       logWarning(
@@ -53,7 +55,7 @@ export async function formatRecipeNote(markdown: string): Promise<string> {
       );
       return markdown;
     }
-    return result.markdown;
+    return restore(result.markdown);
   } catch (error) {
     logWarning(
       `AI formatting failed: ${error instanceof Error ? error.message : String(error)}. Using unformatted Markdown.`,

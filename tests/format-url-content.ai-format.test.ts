@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -14,6 +14,8 @@ import {
 } from 'vitest';
 import { callOpenAI } from '../src/shared/openai-client.ts';
 import { formatRecipeNote } from '../src/format-url-content/ai-formatter/index.ts';
+import { shortenRecipeTitle } from '../src/format-url-content/ai-formatter/title.ts';
+import { runBatch } from '../src/format-url-content/batch.ts';
 import { runUrlContentFormatter } from '../src/format-url-content/url-content-formatter.ts';
 
 vi.mock('../src/shared/openai-client.ts', () => ({ callOpenAI: vi.fn() }));
@@ -22,6 +24,8 @@ vi.mock('../src/shared/constants.ts', () => ({
   MEDIUM_MODEL: 'medium',
   FULL_MODEL: 'full',
 }));
+
+const imageTarget = '99%20images2/%D0%A1%D1%83%D0%BF-step-02-f3a4.jpg';
 
 const note = `## Ингредиенты
 
@@ -32,18 +36,20 @@ const note = `## Ингредиенты
 
 1. Нарежьте овощи.
 
-   ![Шаг 1](https://example.com/step.jpg)`;
+   ![Шаг 1](${imageTarget})`;
+// The model sees short ids instead of image paths.
+const maskedNote = note.replace(imageTarget, 'image-1');
 
-const formatted = `---
+const frontmatter = `---
 tags:
   - рецепты
   - суп
 ингредиенты:
   - помидоры
   - лук
----
-
-${note}`;
+---`;
+const formatted = `${frontmatter}\n\n${note}`;
+const formattedMasked = `${frontmatter}\n\n${maskedNote}`;
 
 const scout = (complexity: string, isRecipe = true) =>
   JSON.stringify({ isRecipe, complexity, reason: 'test' });
@@ -60,13 +66,13 @@ describe('AI note formatting', () => {
   ])('routes %s notes to the %s model', async (complexity, model) => {
     vi.mocked(callOpenAI)
       .mockResolvedValueOnce(scout(complexity))
-      .mockResolvedValueOnce(formatted);
+      .mockResolvedValueOnce(formattedMasked);
 
     expect(await formatRecipeNote(note)).toBe(formatted);
     expect(callOpenAI).toHaveBeenCalledTimes(2);
     expect(vi.mocked(callOpenAI).mock.calls[0]?.[1]).toBe('mini');
     expect(vi.mocked(callOpenAI).mock.calls[1]?.[1]).toBe(model);
-    expect(vi.mocked(callOpenAI).mock.calls[1]?.[0]).toBe(note);
+    expect(vi.mocked(callOpenAI).mock.calls[1]?.[0]).toBe(maskedNote);
   });
 
   it('unwraps a code fence and normalizes tags', async () => {
@@ -78,7 +84,7 @@ tags:
 ингредиенты:
   - "помидоры: свежие"
 ---
-${note}
+${maskedNote}
 \`\`\``;
     vi.mocked(callOpenAI)
       .mockResolvedValueOnce(scout('simple'))
@@ -106,11 +112,15 @@ ${note}
 
   it.each([
     ['empty output', ''],
-    ['missing frontmatter', note],
-    ['missing ingredients field', `---\ntags:\n  - рецепты\n---\n\n${note}`],
+    ['missing frontmatter', maskedNote],
     [
-      'lost image',
-      formatted.replace('![Шаг 1](https://example.com/step.jpg)', ''),
+      'missing ingredients field',
+      `---\ntags:\n  - рецепты\n---\n\n${maskedNote}`,
+    ],
+    ['lost image', formattedMasked.replace('![Шаг 1](image-1)', '')],
+    [
+      'rewritten image path',
+      formattedMasked.replace('image-1', decodeURIComponent(imageTarget)),
     ],
     ['missing sections', '---\nингредиенты:\n  - лук\n---\n\nТолько текст'],
   ])('keeps the note on invalid output: %s', async (_name, response) => {
@@ -133,18 +143,72 @@ ${note}
   });
 });
 
-const recipePage = `<html lang="ru"><head><title>Томатный суп</title>
+const longTitle = 'Томатный суп: пошаговый рецепт с фото';
+
+describe('AI title shortening', () => {
+  beforeEach(() => {
+    vi.mocked(callOpenAI).mockReset();
+  });
+
+  it('returns the shortened title', async () => {
+    vi.mocked(callOpenAI).mockResolvedValueOnce('"Томатный суп."\nПояснение');
+
+    expect(await shortenRecipeTitle(longTitle)).toBe('Томатный суп');
+    expect(vi.mocked(callOpenAI).mock.calls[0]?.[0]).toBe(longTitle);
+    expect(vi.mocked(callOpenAI).mock.calls[0]?.[1]).toBe('mini');
+  });
+
+  it.each([
+    [
+      'Как приготовить пасту болоньезе с фаршем по итальянскому рецепту',
+      'Паста болоньезе с фаршем',
+    ],
+    ['Пирог со свежими персиками и творогом', 'Пирог с персиками и творогом'],
+  ])('accepts changed word endings: %s', async (original, shortened) => {
+    vi.mocked(callOpenAI).mockResolvedValueOnce(shortened);
+
+    expect(await shortenRecipeTitle(original)).toBe(shortened);
+  });
+
+  it.each([
+    ['empty response', ''],
+    ['invented words', 'Овощной суп'],
+    ['too long', `Томатный суп ${'суп '.repeat(30)}`],
+  ])('keeps the original title on %s', async (_name, response) => {
+    vi.mocked(callOpenAI).mockResolvedValueOnce(response);
+
+    expect(await shortenRecipeTitle(longTitle)).toBe(longTitle);
+  });
+
+  it('keeps the original title when the API fails', async () => {
+    vi.mocked(callOpenAI).mockRejectedValue(new Error('API unavailable'));
+
+    expect(await shortenRecipeTitle(longTitle)).toBe(longTitle);
+  });
+
+  it('does not call the API for empty or oversized titles', async () => {
+    expect(await shortenRecipeTitle('  ')).toBe('  ');
+    expect(await shortenRecipeTitle('с'.repeat(301))).toHaveLength(301);
+    expect(callOpenAI).not.toHaveBeenCalled();
+  });
+});
+
+const buildRecipePage = (
+  name: string,
+) => `<html lang="ru"><head><title>${name}</title>
   <script type="application/ld+json">${JSON.stringify({
     '@type': 'Recipe',
-    name: 'Томатный суп',
+    name,
     recipeIngredient: ['2 помидора', '1 луковица'],
     recipeInstructions: ['Нарежьте овощи.', 'Тушите до мягкости.'],
-  })}</script></head><body><article><h1>Томатный суп</h1></article></body></html>`;
+  })}</script></head><body><article><h1>${name}</h1></article></body></html>`;
 
 describe('AI note formatting in the pipeline', () => {
-  const server = createServer((_request, response) => {
+  const server = createServer((request, response) => {
     response.setHeader('content-type', 'text/html; charset=utf-8');
-    response.end(recipePage);
+    response.end(
+      buildRecipePage(request.url === '/long' ? longTitle : 'Томатный суп'),
+    );
   });
   let url: string;
   let directory: string;
@@ -216,5 +280,38 @@ describe('AI note formatting in the pipeline', () => {
 
     expect(callOpenAI).not.toHaveBeenCalled();
     expect(markdown.startsWith('# Томатный суп')).toBe(true);
+  });
+
+  describe('batch file names', () => {
+    const runImport = async (noAi: boolean) => {
+      const inputFile = path.join(directory, 'urls.txt');
+      await writeFile(inputFile, `${url}long\n`);
+      await runBatch({
+        inputFile,
+        dest: directory,
+        noAi,
+        mainImageOnly: false,
+        downloadImages: false,
+        imagesFolder: 'attachments',
+      });
+    };
+
+    it('names the note after the shortened title', async () => {
+      vi.mocked(callOpenAI)
+        .mockResolvedValueOnce('Томатный суп')
+        .mockRejectedValue(new Error('API unavailable'));
+
+      await runImport(false);
+      expect(await readdir(directory)).toContain('Томатный суп.md');
+    });
+
+    it('names the note after the full title with --no-ai', async () => {
+      await runImport(true);
+
+      expect(callOpenAI).not.toHaveBeenCalled();
+      expect(await readdir(directory)).toContain(
+        `${longTitle.replace(':', '-')}.md`,
+      );
+    });
   });
 });

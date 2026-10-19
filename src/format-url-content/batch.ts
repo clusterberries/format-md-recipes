@@ -3,6 +3,7 @@ import { writeFileAtomically } from './utils/atomic-file.ts';
 import path from 'node:path';
 import type { BatchOptions } from './cli.ts';
 import { runUrlContentFormatter } from './url-content-formatter.ts';
+import { shortenRecipeTitle } from './ai-formatter/title.ts';
 import { assertSafeUrl } from './utils/url-guard.ts';
 import { getLogFile, logError, logInfo, logProgress } from './logger.ts';
 
@@ -88,10 +89,13 @@ export async function runBatch(options: BatchOptions) {
           downloadImages: options.downloadImages,
           imagesFolder: options.imagesFolder,
         },
-        (title, renderForOutput) =>
+        async (title, renderForOutput) =>
           saveMarkdown(
             options.dest,
-            outputName(title, entry.url),
+            outputName(
+              options.noAi ? title : await shortenRecipeTitle(title),
+              entry.url,
+            ),
             renderForOutput,
           ),
       );
