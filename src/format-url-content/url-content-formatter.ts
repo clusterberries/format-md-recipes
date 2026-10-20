@@ -55,7 +55,7 @@ export async function runUrlContentFormatter(
         `Falling back to cleaned page content: ${aiResult.fallbackReason}.`,
       );
     } else {
-      logInfo(
+      logWarning(
         'Could not identify recipe (missing ingredients/instructions). Falling back to cleaned page content.',
       );
     }
@@ -145,9 +145,6 @@ async function resolveConflicts(
   }
 
   if (!isRecipeIdentified(content.reconciledRecipe)) {
-    logInfo(
-      'Could not identify recipe (missing ingredients/instructions). Skipping AI conflict resolution.',
-    );
     return {
       recipe: content.reconciledRecipe,
       called: false,

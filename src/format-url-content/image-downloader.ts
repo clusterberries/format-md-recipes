@@ -12,6 +12,32 @@ import type { ExtractedImage, ReconciledRecipe } from './types.ts';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_RECIPE_BYTES = 50 * 1024 * 1024;
+const IMAGE_HASH_LENGTH = 16;
+const MAX_IMAGE_FILENAME_LENGTH = 60;
+
+function getImageNameStem(
+  output: string,
+  postfix: string,
+  extension: string,
+): string {
+  const suffixLength =
+    1 + postfix.length + 1 + IMAGE_HASH_LENGTH + 1 + extension.length;
+  const maxStemLength = MAX_IMAGE_FILENAME_LENGTH - suffixLength;
+  const outputStem = path
+    .basename(output, path.extname(output))
+    .normalize('NFC');
+  const words = outputStem.match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
+  let stem = '';
+  for (const word of words) {
+    const candidate = stem ? `${stem}-${word}` : word;
+    if (Array.from(candidate).length > maxStemLength) {
+      if (!stem) stem = Array.from(word).slice(0, maxStemLength).join('');
+      break;
+    }
+    stem = candidate;
+  }
+  return stem || 'recipe';
+}
 
 /** Only collect images the renderer will emit, after conflict resolution. */
 export function collectRenderedImages(
@@ -44,17 +70,6 @@ export async function downloadRecipeImages(
   imagesFolder = DEFAULT_IMAGES_FOLDER,
 ): Promise<{ destinations: Map<string, string>; failed: number }> {
   const destinations = new Map<string, string>();
-  // Keep the final note stem (including batch collision suffixes), except
-  // characters unsuitable for attachment links and very long filenames.
-  const stem =
-    Array.from(
-      path
-        .basename(output, path.extname(output))
-        .replace(/[<>:"/\\|?*#^%[\]\p{Cc}]/gu, '-'),
-    )
-      .slice(0, 100)
-      .join('')
-      .replace(/[. ]+$/u, '') || 'recipe';
   const directory = path.join(
     path.dirname(output),
     validateImagesFolder(imagesFolder),
@@ -83,10 +98,11 @@ export async function downloadRecipeImages(
         throw new Error(
           `Unsupported or invalid image (${contentType ?? 'unknown content type'})`,
         );
+      const stem = getImageNameStem(output, postfix, extension);
       const hash = createHash('sha256')
         .update(buffer)
         .digest('hex')
-        .slice(0, 16);
+        .slice(0, IMAGE_HASH_LENGTH);
       const destination = path.join(
         directory,
         `${stem}-${postfix}-${hash}.${extension}`,

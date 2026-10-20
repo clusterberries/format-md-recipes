@@ -148,7 +148,7 @@ describe('local recipe images', () => {
     expect(links).toHaveLength(2);
     expect(requests).toContain('/main?signature=keep');
     expect(requests).not.toContain('/unused');
-    expect(links[0]).toContain('%20%28');
+    expect(decodeURIComponent(links[0]!)).toContain('Суп-домашний-1-main-');
     for (const link of links) {
       expect(link).not.toContain('\\');
       expect(
@@ -156,7 +156,7 @@ describe('local recipe images', () => {
       ).toEqual(png);
     }
     expect(decodeURIComponent(links[0]!)).toMatch(
-      /Суп \(домашний\) -1-main-[a-f0-9]+\.png$/,
+      /Суп-домашний-1-main-[a-f0-9]+\.png$/,
     );
     expect(decodeURIComponent(links[1]!)).toContain('-step-01-');
     const moved = path.join(directory, 'relocated');
@@ -169,6 +169,27 @@ describe('local recipe images', () => {
       expect(
         await readFile(path.join(moved, decodeURIComponent(link))),
       ).toEqual(png);
+  });
+
+  it('sanitizes image names and truncates at a word boundary', async () => {
+    const { markdown } = await run(
+      '/recipe',
+      false,
+      true,
+      'Very tasty tomato soup, with roasted peppers and fresh herbs, for cold evenings.md',
+    );
+    const filenames = imageLinks(markdown).map((link) =>
+      path.basename(decodeURIComponent(link)),
+    );
+
+    expect(filenames[0]).toMatch(
+      /^Very-tasty-tomato-soup-with-main-[a-f0-9]+\.png$/,
+    );
+    expect(filenames[0]).not.toContain(',');
+    expect(filenames[1]).toMatch(/-step-01-[a-f0-9]+\.png$/);
+    expect(filenames.every((filename) => [...filename].length <= 60)).toBe(
+      true,
+    );
   });
 
   it('downloads only the main image in main-image-only mode and keeps it before the source footer', async () => {
@@ -354,14 +375,14 @@ describe('local recipe images', () => {
       'utf8',
     );
     expect(decodeURIComponent(imageLinks(markdown)[0]!)).toContain(
-      'images/Суп (домашний)-2-main-',
+      'images/Суп-домашний-2-main-',
     );
     const lastMarkdown = await readFile(
       path.join(directory, 'Суп (домашний)-4.md'),
       'utf8',
     );
     expect(decodeURIComponent(imageLinks(lastMarkdown)[0]!)).toContain(
-      'images/Суп (домашний)-4-main-',
+      'images/Суп-домашний-4-main-',
     );
     const images = await readdir(path.join(directory, 'images'), {
       withFileTypes: true,

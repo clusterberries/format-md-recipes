@@ -102,7 +102,13 @@ export async function runBatch(options: BatchOptions) {
       successful++;
       if (result?.imageFailures) notesWithRemoteImages++;
     } catch (error) {
-      const failure = `Line ${entry.line}: ${entry.url} — ${error instanceof Error ? error.message : String(error)}`;
+      const cause = error instanceof Error ? error.cause : undefined;
+      const reason = cause instanceof Error ? cause : error;
+      const message = reason instanceof Error ? reason.message : String(reason);
+      const details = message.includes(entry.url)
+        ? message
+        : `${entry.url}: ${message}`;
+      const failure = `Input file line ${entry.line} failed: ${details}`;
       failures.push(failure);
       logError(failure);
     }

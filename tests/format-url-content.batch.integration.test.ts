@@ -134,7 +134,7 @@ describe('format-url-content batch integration', () => {
           'Finished: 1 of 2 successful, 1 failure.',
         ) as unknown,
         stderr: expect.stringMatching(
-          /ERROR: Line 1:[\s\S]*See log:/u,
+          /ERROR: Input file line 1 failed: Failed to fetch http:\/\/127\.0\.0\.1:\d+\/missing\.html: 404 Not Found/u,
         ) as unknown,
       });
       expect(
@@ -147,8 +147,13 @@ describe('format-url-content batch integration', () => {
         path.join(outputDirectory, 'import.log'),
         'utf8',
       );
-      expect(log).toContain('[ERROR] Line 1:');
-      expect(log).toContain('missing.html');
+      const failure = log
+        .split(/\r?\n/u)
+        .find((line) => line.includes('[ERROR]'));
+      expect(failure).toMatch(
+        /\[ERROR\] Input file line 1 failed: Failed to fetch http:\/\/127\.0\.0\.1:\d+\/missing\.html: 404 Not Found$/u,
+      );
+      expect(failure?.match(/https?:\/\//gu)).toHaveLength(1);
       expect(log).toContain('Finished: 1 of 2 successful, 1 failure.');
       expect(log).toContain('=== Run finished (exit code 1) ===');
     },
