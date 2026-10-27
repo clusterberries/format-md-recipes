@@ -3,8 +3,8 @@ import {
   DEFAULT_IMAGES_FOLDER,
   validateImagesFolder,
 } from './utils/images-folder.ts';
-import { program } from 'commander';
-import type { CliOptions } from './types.ts';
+import { Command } from 'commander';
+import type { BatchOptions, CliOptions } from './types.ts';
 import { assertSafeUrl } from './utils/url-guard.ts';
 
 interface CommanderOptions {
@@ -18,16 +18,8 @@ interface CommanderOptions {
   imagesFolder: string;
 }
 
-export interface BatchOptions {
-  inputFile: string;
-  dest: string;
-  noAi: boolean;
-  mainImageOnly: boolean;
-  downloadImages: boolean;
-  imagesFolder: string;
-}
-
 export function parseOptions(): CliOptions | BatchOptions {
+  const program: Command = new Command();
   program
     .name('format-url-content')
     .description('Fetch URL content and parse it using OpenAI')

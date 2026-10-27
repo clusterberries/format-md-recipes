@@ -13,6 +13,8 @@ import {
 } from './redirect-notice.ts';
 import type { ParsedRecipePage } from '../types.ts';
 
+const MAX_FOLLOWED_NOTICES = 1;
+
 export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
   const { html, encoding, contentType, finalUrl, dom } =
     await fetchRecipePage(url);
@@ -27,6 +29,7 @@ export async function parseRecipePage(url: string): Promise<ParsedRecipePage> {
     `Detected encoding: ${encoding}, language: ${metadata.language ?? 'unknown'}`,
   );
 
+  // Readability mutates the document, so everything that reads it must run before this.
   const article = new Readability(dom.window.document).parse();
   const parsedArticle = article
     ? {
@@ -84,7 +87,7 @@ async function fetchRecipePage(requestedUrl: string) {
     logInfo(`Following embedded page URL: ${fetchUrl}`);
 
   const visited = new Set<string>();
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let followedNotices = 0; ; followedNotices++) {
     if (visited.has(fetchUrl))
       throw new Error(`Redirect notice loop while fetching ${requestedUrl}`);
     visited.add(fetchUrl);
@@ -102,15 +105,11 @@ async function fetchRecipePage(requestedUrl: string) {
     const notice = inspectRedirectNotice(dom.window.document, finalUrl);
     if (!notice.isNotice) return { html, encoding, contentType, finalUrl, dom };
 
-    if (!notice.target || attempt === 1)
+    if (!notice.target || followedNotices >= MAX_FOLLOWED_NOTICES)
       throw new Error(
         `Received a redirect notice instead of a recipe page: ${finalUrl}`,
       );
     fetchUrl = assertSafeUrl(notice.target).href;
     logInfo(`Following redirect notice to ${fetchUrl}`);
   }
-
-  throw new Error(
-    `Received a redirect notice instead of a recipe page: ${requestedUrl}`,
-  );
 }

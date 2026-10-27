@@ -91,10 +91,6 @@ export function logWarning(message: string, details?: unknown): void {
   getLogger().warn(withDetails(message, details));
 }
 
-export function logSuccess(message: string, details?: unknown): void {
-  getLogger().info(withDetails(message, details));
-}
-
 export function logError(message: string, details?: unknown): void {
   getLogger().error(withDetails(message, details));
 }

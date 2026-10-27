@@ -24,35 +24,22 @@ export async function fetchWithRetry(
   buffer: Buffer;
   contentType: string | null;
 }> {
-  let lastError: unknown;
+  const maxAttempts = options.attempts ?? MAX_FETCH_ATTEMPTS;
 
-  for (
-    let attempt = 1;
-    attempt <= (options.attempts ?? MAX_FETCH_ATTEMPTS);
-    attempt++
-  ) {
+  for (let attempt = 1; ; attempt++) {
     try {
       return await fetchAttempt(url, options);
     } catch (error) {
-      lastError = error;
-
-      if (
-        attempt === (options.attempts ?? MAX_FETCH_ATTEMPTS) ||
-        !isRetryableFetchError(error)
-      ) {
+      if (attempt >= maxAttempts || !isRetryableFetchError(error)) {
         throw error;
       }
 
       logWarning(
-        `Fetch attempt ${attempt}/${options.attempts ?? MAX_FETCH_ATTEMPTS} failed for ${url}: ${getErrorMessage(error)}. Retrying...`,
+        `Fetch attempt ${attempt}/${maxAttempts} failed for ${url}: ${getErrorMessage(error)}. Retrying...`,
       );
       await waitBeforeRetry(attempt);
     }
   }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new Error(`Failed to fetch ${url}`);
 }
 
 async function fetchAttempt(
@@ -124,7 +111,7 @@ async function fetchFollowingRedirects(
 ): Promise<Response> {
   let currentUrl = assertSafeUrl(url).href;
 
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+  for (let hop = 0; ; hop++) {
     let response: Response;
 
     try {
@@ -158,8 +145,6 @@ async function fetchFollowingRedirects(
 
     currentUrl = assertSafeUrl(new URL(location, currentUrl).href).href;
   }
-
-  throw new Error(`Too many redirects while fetching ${url}`);
 }
 
 function isRedirectStatus(status: number): boolean {

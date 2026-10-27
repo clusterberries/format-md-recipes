@@ -55,7 +55,7 @@ export function findMainContentRoot($: CheerioAPI): Cheerio<Element> {
   const fallback = $('body').first();
   const semanticRoot = findSemanticRecipeRoot($);
 
-  if (semanticRoot.length) {
+  if (semanticRoot?.length) {
     return semanticRoot;
   }
 
@@ -76,7 +76,7 @@ export function findMainContentRoot($: CheerioAPI): Cheerio<Element> {
   return bestRoot;
 }
 
-function findSemanticRecipeRoot($: CheerioAPI): Cheerio<Element> {
+function findSemanticRecipeRoot($: CheerioAPI): Cheerio<Element> | null {
   const recipeRoot = $(RECIPE_ROOT_SELECTOR).first();
 
   if (recipeRoot.length) {
@@ -87,9 +87,7 @@ function findSemanticRecipeRoot($: CheerioAPI): Cheerio<Element> {
   const instruction = $(RECIPE_INSTRUCTION_SELECTOR).first();
 
   if (!ingredient.length || !instruction.length) {
-    return $('body')
-      .first()
-      .filter(() => false);
+    return null;
   }
 
   const ancestors = ingredient.parents().filter((_, element) => {

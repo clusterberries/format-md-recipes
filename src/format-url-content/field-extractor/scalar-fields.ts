@@ -2,17 +2,17 @@ import type { ExtractedField, FieldSource } from '../types.ts';
 import type { RecipeSchema } from '../images-parser/types.ts';
 import { SOURCE_CONFIDENCE } from './constants.ts';
 
-export function fieldFromValue<T>(
+export function fieldFromValue(
   value: unknown,
   source: FieldSource,
   location: string,
-): ExtractedField<T>[] {
+): ExtractedField<string>[] {
   if (typeof value !== 'string' && typeof value !== 'number') return [];
   const normalized = String(value).trim();
   if (!normalized) return [];
   return [
     {
-      value: normalized as T,
+      value: normalized,
       source,
       confidence: SOURCE_CONFIDENCE[source],
       location,
@@ -27,7 +27,7 @@ export function extractSchemaField(
   fieldName: string,
 ): ExtractedField<string>[] {
   return recipes.flatMap((recipe, index) =>
-    fieldFromValue<string>(
+    fieldFromValue(
       Array.isArray(recipe[property])
         ? recipe[property]
             .filter(
@@ -56,7 +56,7 @@ export function extractCandidateMetaFields(
   return candidates.flatMap((candidate) => {
     const value = candidate[property];
     if (typeof value !== 'string' || !value.trim()) return [];
-    return fieldFromValue<string>(
+    return fieldFromValue(
       value,
       candidate.source,
       `${candidate.location}.${property}`,

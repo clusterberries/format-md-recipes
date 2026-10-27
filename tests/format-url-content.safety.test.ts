@@ -50,6 +50,8 @@ const server = createServer((request, response) => {
     response.end(`<html><head><title>Soup</title><script type="application/ld+json">
       ${JSON.stringify({ ...recipeSchema, recipeInstructions: ['Step 1 Cook the onion. Step 2 Serve the soup.'] })}
       </script></head><body>${article}</body></html>`);
+  } else if (request.url === '/empty-page') {
+    response.end('<html><head></head><body></body></html>');
   } else if (request.url === '/form-wrapped') {
     // ASP.NET WebForms wraps the whole page, including the article, in one form.
     response.end(`<html><head><title>Soup</title><script type="application/ld+json">
@@ -146,6 +148,29 @@ describe('recipe content safety', () => {
     const markdown = await run('/collapsed', true);
     expect(markdown).toContain('Cook the onion. Then serve the soup');
     expect(markdown).not.toContain('## Ingredients');
+  });
+
+  it('writes nothing for a page without content', async () => {
+    const output = path.join(directory, 'recipe.md');
+    const options = {
+      inputUrl: `${baseUrl}/empty-page`,
+      output,
+      noAi: true,
+      mainImageOnly: false,
+      downloadImages: false,
+      imagesFolder: 'attachments',
+    };
+
+    await expect(runUrlContentFormatter(options)).resolves.toEqual({
+      imageFailures: 0,
+    });
+    await expect(readFile(output, 'utf8')).rejects.toThrow('ENOENT');
+
+    const saveResult = vi.fn();
+    await expect(
+      runUrlContentFormatter({ ...options, output: null }, saveResult),
+    ).rejects.toThrow('No content or recipe found.');
+    expect(saveResult).not.toHaveBeenCalled();
   });
 
   it('keeps page content wrapped in a page-level form but drops small forms', async () => {

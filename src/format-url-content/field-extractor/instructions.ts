@@ -16,10 +16,12 @@ export function extractInstructions(
     flattenSchemaInstructions(recipe.recipeInstructions).forEach(
       (step, index) => {
         const text = step.text;
-        if (typeof text !== 'string' || !isLikelyInstructionText(text)) return;
+        if (typeof text !== 'string') return;
+        const normalized = normalizeInstructionText(text);
+        if (!isLikelyInstructionText(normalized)) return;
         instructions.push(
           createInstruction(
-            text,
+            normalized,
             index,
             'json-ld',
             `json-ld-${recipeIndex}.recipeInstructions[${index}]`,
@@ -31,10 +33,11 @@ export function extractInstructions(
 
   [...sources.microdata, ...sources.recipeHtml].forEach((candidate) => {
     candidate.instructions.forEach((text, index) => {
-      if (!isLikelyInstructionText(text)) return;
+      const normalized = normalizeInstructionText(text);
+      if (!isLikelyInstructionText(normalized)) return;
       instructions.push(
         createInstruction(
-          text,
+          normalized,
           index,
           candidate.source,
           `${candidate.location}.instructions[${index}]`,
@@ -47,13 +50,13 @@ export function extractInstructions(
 }
 
 function createInstruction(
-  text: string,
+  normalizedText: string,
   stepIndex: number,
   source: FieldSource,
   location: string,
 ): ExtractedInstruction {
   return {
-    text: normalizeInstructionText(text),
+    text: normalizedText,
     stepIndex,
     source,
     confidence: SOURCE_CONFIDENCE[source],
@@ -70,10 +73,8 @@ function normalizeInstructionText(value: string): string {
   );
 }
 
-function isLikelyInstructionText(value: string): boolean {
-  const text = normalizeInstructionText(value);
+function isLikelyInstructionText(text: string): boolean {
   if (!text || text.length < 2) return false;
-  if (/^(?:шаг|step)\s*\d+$/i.test(text)) return false;
   if (/^\d+(?:[.,]\d+)?$/.test(text)) return false;
   if (/^(?:шаг|step)\s*\d+\s*[:.-]?\s*$/i.test(text)) return false;
   if (/^[\d\s\p{P}\p{S}]+$/u.test(text)) return false;

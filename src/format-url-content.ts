@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import { run } from './format-url-content/index.ts';
 import {
   closeLogger,
@@ -8,8 +8,6 @@ import {
   logError,
   logInfo,
 } from './format-url-content/logger.ts';
-
-dotenv.config();
 
 async function main(): Promise<void> {
   try {

@@ -13,6 +13,15 @@ export interface CliOptions {
   imagesFolder: string;
 }
 
+export interface BatchOptions {
+  inputFile: string;
+  dest: string;
+  noAi: boolean;
+  mainImageOnly: boolean;
+  downloadImages: boolean;
+  imagesFolder: string;
+}
+
 export interface ParsedArticle {
   title: string | null;
   excerpt: string | null;
@@ -63,8 +72,7 @@ export interface RecipeContentCandidate {
   totalTime?: string | null;
 }
 
-export type RecipeCandidateSource =
-  'json-ld' | 'microdata' | 'html' | 'form' | 'readability';
+export type RecipeCandidateSource = 'json-ld' | RecipeSource | 'readability';
 
 export type FieldSource = RecipeCandidateSource | 'metadata';
 
@@ -134,11 +142,15 @@ export interface NormalizedRecipe {
 }
 
 export type ConflictReason =
-  | 'different-values'
-  | 'different-quantities'
-  | 'different-order'
-  | 'incomplete-source'
-  | 'multiple-candidates';
+  'different-values' | 'different-quantities' | 'different-order';
+
+export type SelectionReason =
+  | 'highest-source-priority'
+  | 'highest-confidence'
+  | 'most-complete-source'
+  | 'ai-selected'
+  | 'ai-merged'
+  | 'ai-filtered';
 
 export interface FieldConflict<T> {
   field: string;
@@ -154,7 +166,7 @@ export interface ReconciledField<T> {
   location: string | null;
   alternatives: ExtractedField<T>[];
   conflicts: FieldConflict<T>[];
-  selectionReason: string | null;
+  selectionReason: SelectionReason | null;
 }
 
 export interface ReconciledCollection<T> {
@@ -163,7 +175,7 @@ export interface ReconciledCollection<T> {
   confidence: number;
   alternatives: T[][];
   conflicts: CollectionConflict<T>[];
-  selectionReason: string | null;
+  selectionReason: SelectionReason | null;
 }
 
 export interface CollectionConflict<T> {

@@ -8,6 +8,7 @@ import type {
   ReconciledCollection,
   ReconciledField,
   ReconciledRecipe,
+  SelectionReason,
 } from '../types.ts';
 import { normalizeText } from '../utils/dom-helpers.ts';
 
@@ -350,7 +351,7 @@ function sameValue<T>(a: T | undefined, b: T | undefined): boolean {
 function getScalarReason<T>(
   selected: ExtractedField<T>,
   fields: ExtractedField<T>[],
-): string {
+): SelectionReason {
   return fields.some(
     (field) =>
       field !== selected &&

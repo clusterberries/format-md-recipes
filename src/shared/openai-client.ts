@@ -2,6 +2,18 @@ import OpenAI from 'openai';
 
 const REQUEST_TIMEOUT_MS = 120_000;
 
+let cachedClient: { apiKey: string; client: OpenAI } | undefined;
+
+function getClient(apiKey: string): OpenAI {
+  if (cachedClient?.apiKey !== apiKey) {
+    cachedClient = {
+      apiKey,
+      client: new OpenAI({ apiKey, timeout: REQUEST_TIMEOUT_MS }),
+    };
+  }
+  return cachedClient.client;
+}
+
 export interface OpenAIRequestOptions {
   systemPrompt?: string;
   maxCompletionTokens?: number;
@@ -19,8 +31,7 @@ export async function callOpenAI(
     );
   }
 
-  const client = new OpenAI({ apiKey, timeout: REQUEST_TIMEOUT_MS });
-  const completion = await client.chat.completions.create({
+  const completion = await getClient(apiKey).chat.completions.create({
     model,
     messages: [
       {
@@ -29,7 +40,6 @@ export async function callOpenAI(
       },
       { role: 'user', content: prompt },
     ],
-    // temperature: 0.2,
     max_completion_tokens: options.maxCompletionTokens ?? 3000,
   });
 

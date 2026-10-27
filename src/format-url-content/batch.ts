@@ -1,8 +1,9 @@
 import { mkdir, readFile, access } from 'node:fs/promises';
 import { writeFileAtomically } from './utils/atomic-file.ts';
 import path from 'node:path';
-import type { BatchOptions } from './cli.ts';
+import type { BatchOptions } from './types.ts';
 import { runUrlContentFormatter } from './url-content-formatter.ts';
+import type { RenderedNote } from './note-renderer.ts';
 import { shortenRecipeTitle } from './ai-formatter/title.ts';
 import { assertSafeUrl } from './utils/url-guard.ts';
 import { getLogFile, logError, logInfo, logProgress } from './logger.ts';
@@ -35,8 +36,8 @@ function outputName(title: string, inputUrl: string): string {
 async function saveMarkdown(
   dest: string,
   name: string,
-  renderForOutput: (output: string) => Promise<string>,
-) {
+  render: (output: string) => Promise<RenderedNote>,
+): Promise<RenderedNote> {
   for (let suffix = 1; ; suffix++) {
     const output = path.join(
       dest,
@@ -51,10 +52,10 @@ async function saveMarkdown(
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
-      const markdown = await renderForOutput(output);
-      await writeFileAtomically(output, markdown, true);
+      const note = await render(output);
+      await writeFileAtomically(output, note.markdown, true);
       logProgress(`Saved to ${output}`);
-      return;
+      return note;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
@@ -89,18 +90,18 @@ export async function runBatch(options: BatchOptions) {
           downloadImages: options.downloadImages,
           imagesFolder: options.imagesFolder,
         },
-        async (title, renderForOutput) =>
+        async (title, render) =>
           saveMarkdown(
             options.dest,
             outputName(
               options.noAi ? title : await shortenRecipeTitle(title),
               entry.url,
             ),
-            renderForOutput,
+            render,
           ),
       );
       successful++;
-      if (result?.imageFailures) notesWithRemoteImages++;
+      if (result.imageFailures) notesWithRemoteImages++;
     } catch (error) {
       const cause = error instanceof Error ? error.cause : undefined;
       const reason = cause instanceof Error ? cause : error;

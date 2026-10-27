@@ -20,32 +20,32 @@ export function extractNormalizedRecipe(
 ): NormalizedRecipe {
   const title = [
     ...sources.jsonLd.flatMap((recipe, index) =>
-      fieldFromValue<string>(
+      fieldFromValue(
         cleanRecipeTitle(typeof recipe.name === 'string' ? recipe.name : null),
         'json-ld',
         `json-ld-${index}.name`,
       ),
     ),
     ...sources.microdata.flatMap((candidate) =>
-      fieldFromValue<string>(
+      fieldFromValue(
         cleanRecipeTitle(candidate.title),
         'microdata',
         candidate.location,
       ),
     ),
     ...sources.recipeHtml.flatMap((candidate) =>
-      fieldFromValue<string>(
+      fieldFromValue(
         cleanRecipeTitle(candidate.title),
         'html',
         candidate.location,
       ),
     ),
-    ...fieldFromValue<string>(
+    ...fieldFromValue(
       cleanRecipeTitle(sources.readability?.title),
       'readability',
       'readability.title',
     ),
-    ...fieldFromValue<string>(
+    ...fieldFromValue(
       cleanRecipeTitle(sources.metadata.title),
       'metadata',
       'metadata.title',
@@ -53,7 +53,7 @@ export function extractNormalizedRecipe(
   ];
   const description = [
     ...sources.jsonLd.flatMap((recipe, index) =>
-      fieldFromValue<string>(
+      fieldFromValue(
         cleanRecipeDescription(
           typeof recipe.description === 'string' ? recipe.description : null,
         ),
@@ -62,25 +62,25 @@ export function extractNormalizedRecipe(
       ),
     ),
     ...sources.microdata.flatMap((candidate) =>
-      fieldFromValue<string>(
+      fieldFromValue(
         cleanRecipeDescription(candidate.description),
         'microdata',
         `${candidate.location}.description`,
       ),
     ),
     ...sources.recipeHtml.flatMap((candidate) =>
-      fieldFromValue<string>(
+      fieldFromValue(
         cleanRecipeDescription(candidate.description),
         'html',
         `${candidate.location}.description`,
       ),
     ),
-    ...fieldFromValue<string>(
+    ...fieldFromValue(
       cleanRecipeDescription(sources.metadata.description),
       'metadata',
       'metadata.description',
     ),
-    ...fieldFromValue<string>(
+    ...fieldFromValue(
       cleanRecipeDescription(sources.readability?.excerpt),
       'readability',
       'readability.excerpt',
