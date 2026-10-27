@@ -81,7 +81,8 @@ export async function downloadRecipeImages(
     try {
       if (bytesRemaining <= 0)
         throw new Error('Recipe image byte limit reached');
-      const { buffer, contentType } = await fetchWithRetry(image.url, {
+      const downloadUrl = getImageDownloadUrl(image.url);
+      const { buffer, contentType } = await fetchWithRetry(downloadUrl, {
         maxBytes: Math.min(MAX_IMAGE_BYTES, bytesRemaining),
         validateContentType(value) {
           if (
@@ -123,7 +124,7 @@ export async function downloadRecipeImages(
     } catch (error) {
       failed++;
       logWarning(
-        `Could not download ${image.url}: ${error instanceof Error ? error.message : String(error)}. Keeping remote URL.`,
+        `Could not download ${getImageDownloadUrl(image.url)}: ${error instanceof Error ? error.message : String(error)}. Keeping remote URL.`,
       );
     }
   }
@@ -131,6 +132,29 @@ export async function downloadRecipeImages(
     `Images: ${destinations.size} saved locally, ${failed} remote${failed ? ' (download failed)' : ''}.`,
   );
   return { destinations, failed };
+}
+
+// RussianFood serves thumbnail images as sm_ files while big_ files contain the full-size image.
+function getImageDownloadUrl(imageUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(imageUrl);
+  } catch {
+    return imageUrl;
+  }
+
+  if (
+    url.hostname !== 'russianfood.com' &&
+    url.hostname !== 'www.russianfood.com'
+  )
+    return imageUrl;
+
+  const filenameStart = url.pathname.lastIndexOf('/') + 1;
+  const filename = url.pathname.slice(filenameStart);
+  if (!filename.startsWith('sm_')) return imageUrl;
+
+  url.pathname = `${url.pathname.slice(0, filenameStart)}big_${filename.slice(3)}`;
+  return url.href;
 }
 
 function encodeRelativePath(value: string): string {

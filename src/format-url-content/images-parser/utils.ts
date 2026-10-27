@@ -6,12 +6,21 @@ const BAD_IMAGE_EXTENSION_PATTERN = /\.(svg|ico)(?:$|\?)/i;
 const TRACKING_URL_PATTERN =
   /\b(pixel|tracking|analytics|doubleclick|googlesyndication|adservice)\b/i;
 
-export function isUsableImageUrl(url: string): boolean {
+/**
+ * Noise words are checked in the file name only: directories and query strings often hold
+ * unrelated words ("/profile/", "?search="). Trusted schema images skip the check entirely.
+ */
+export function isUsableImageUrl(
+  url: string,
+  { checkNoise = true }: { checkNoise?: boolean } = {},
+): boolean {
   let location: string;
+  let fileName: string;
 
   try {
     const parsedUrl = new URL(url);
     location = `${parsedUrl.pathname}${parsedUrl.search}`;
+    fileName = parsedUrl.pathname.split('/').pop() ?? '';
   } catch {
     return false;
   }
@@ -20,7 +29,7 @@ export function isUsableImageUrl(url: string): boolean {
     !url.startsWith('data:') &&
     !BAD_IMAGE_EXTENSION_PATTERN.test(location) &&
     !TRACKING_URL_PATTERN.test(location) &&
-    !NOISE_PATTERN.test(location)
+    !(checkNoise && NOISE_PATTERN.test(fileName))
   );
 }
 

@@ -1,20 +1,8 @@
-import type { RecipeCandidate, ReconciledRecipe } from '../types.ts';
-import { SIMILAR_CANDIDATE_SCORE_GAP } from './constants.ts';
+import type { ReconciledRecipe } from '../types.ts';
 
-export function getAiReasons(
-  recipe: ReconciledRecipe,
-  candidates: RecipeCandidate[],
-): string[] {
+export function getAiReasons(recipe: ReconciledRecipe): string[] {
   const reasons: string[] = [];
   if (recipe.conflicts.length) reasons.push('field conflicts detected');
-  if (
-    candidates.length > 1 &&
-    candidates[0] &&
-    candidates[1] &&
-    candidates[0].score - candidates[1].score <= SIMILAR_CANDIDATE_SCORE_GAP
-  ) {
-    reasons.push('recipe candidates have similar scores');
-  }
   if (
     recipe.ingredients.conflicts.length ||
     recipe.instructions.conflicts.length

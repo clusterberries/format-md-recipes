@@ -112,9 +112,25 @@ describe('shared bounded fetch', () => {
     'https://fdrecipes.example/recipe',
     'https://[::ffff:8.8.8.8]/recipe',
     'https://[2606:4700:4700::1111]/recipe',
+    'https://[64:ff9b::808:808]/recipe',
   ])('allows public hostname or address %s', (url) => {
     vi.stubEnv('FORMAT_URL_CONTENT_ALLOW_PRIVATE_HOSTS', '0');
     expect(assertSafeUrl(url).href).toBe(new URL(url).href);
+  });
+
+  it.each([
+    'http://localhost./recipe',
+    'http://printer.local/recipe',
+    'http://100.64.0.1/recipe',
+    'http://198.18.0.1/recipe',
+    'http://224.0.0.1/recipe',
+    'http://[::127.0.0.1]/recipe',
+    'http://[64:ff9b::7f00:1]/recipe',
+    'http://[2002:7f00:1::]/recipe',
+    'http://[ff02::1]/recipe',
+  ])('rejects private or reserved address %s', (url) => {
+    vi.stubEnv('FORMAT_URL_CONTENT_ALLOW_PRIVATE_HOSTS', '0');
+    expect(() => assertSafeUrl(url)).toThrow('private/local');
   });
 
   it('rejects unsupported schemes before fetching', async () => {

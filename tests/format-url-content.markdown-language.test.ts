@@ -103,8 +103,15 @@ describe('recipe Markdown text', () => {
     );
   });
 
-  it('uses English when page language is missing', () => {
+  it('uses Russian when page language is missing', () => {
     const markdown = renderRecipeMarkdown(recipe(null));
+    expect(markdown).toContain('# Рецепт');
+    expect(markdown).toContain('## Примечания');
+    expect(markdown).toContain('![Шаг 1](https://example.test/step.jpg)');
+  });
+
+  it('renders generated text in English for an English locale', () => {
+    const markdown = renderRecipeMarkdown(recipe('en-US'));
     expect(markdown).toContain('# Recipe');
     expect(markdown).toContain('## Notes');
     expect(markdown).toContain('![Step 1](https://example.test/step.jpg)');

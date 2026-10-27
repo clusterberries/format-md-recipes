@@ -2,6 +2,7 @@ import * as cheerio from 'cheerio';
 import { findMainContentRoot } from './find-content-root.ts';
 import { removeEmptyElements } from './empty-element-remover.ts';
 import {
+  convertContentFormsToContainers,
   removeGlobalNoise,
   removeHtmlComments,
   removeNamedNoise,
@@ -20,6 +21,7 @@ export function cleanRecipeContent(content: string): string {
 
   const $ = cheerio.load(content);
 
+  convertContentFormsToContainers($);
   $(HARD_REMOVE_SELECTOR).remove();
 
   const root = findMainContentRoot($);

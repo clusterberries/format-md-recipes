@@ -14,7 +14,7 @@ export async function resolveRecipeConflicts(
   recipe: ReconciledRecipe,
   candidates: RecipeCandidate[],
 ): Promise<AiResolutionResult> {
-  const reasons = getAiReasons(recipe, candidates);
+  const reasons = getAiReasons(recipe);
   if (!reasons.length) {
     logInfo('No conflicts detected. Skipping AI conflict resolution.');
     return { recipe, called: false, applied: false, reasons };

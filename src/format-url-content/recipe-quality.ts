@@ -1,8 +1,11 @@
 import type { ReconciledRecipe } from './types.ts';
 
+// Leaked JS has no space around the dot; prose like "by the window. Serve" must not match.
 const SCRIPT_PATTERN =
-  /\b(?:window|document)\s*\.\s*[\w$]+|\badsbygoogle\b|<script\b/iu;
-const STEP_MARKER_PATTERN = /(?:^|\s)(?:step|шаг)\s*\d+\b/giu;
+  /\b(?:window|document)\.[\w$]+\s*[=([.;,]|\badsbygoogle\b|<script\b/iu;
+// Capitalised markers only: "Repeat step 2 and step 3" is a cross-reference, not collapsed steps.
+const STEP_MARKER_PATTERN =
+  /(?:^|\s)(?:Step|STEP|Шаг|ШАГ)\s*\d+(?![\p{L}\p{N}])/gu;
 const METADATA_LABEL_PATTERN =
   /(?:время приготовления|количество порций|калорийность|cooking time|number of servings|calories)\s*:/giu;
 

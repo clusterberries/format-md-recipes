@@ -43,13 +43,21 @@ const server = createServer((request, response) => {
       '<html><head><title>Redirect Notice</title></head><body>No destination</body></html>',
     );
   } else if (request.url === '/recipe') {
-    response.end(`<html><head><title>Soup tutorial</title>
+    response.end(`<html lang="en"><head><title>Soup tutorial</title>
       <script type="application/ld+json">${JSON.stringify(recipeSchema)}</script>
       </head><body>${article}</body></html>`);
   } else if (request.url === '/collapsed') {
     response.end(`<html><head><title>Soup</title><script type="application/ld+json">
       ${JSON.stringify({ ...recipeSchema, recipeInstructions: ['Step 1 Cook the onion. Step 2 Serve the soup.'] })}
       </script></head><body>${article}</body></html>`);
+  } else if (request.url === '/form-wrapped') {
+    // ASP.NET WebForms wraps the whole page, including the article, in one form.
+    response.end(`<html><head><title>Soup</title><script type="application/ld+json">
+      ${JSON.stringify({ ...recipeSchema, recipeInstructions: ['Step 1 Cook the onion. Step 2 Serve the soup.'] })}
+      </script></head><body>
+      <form action="/search"><input name="q"><button>Search recipes</button></form>
+      <form id="form1" method="post">${article}<p>${'Soup notes. '.repeat(100)}</p></form>
+      </body></html>`);
   } else if (request.url === '/recipe-outside-article') {
     response.end(`<html><head><title>Плескавица</title><script type="application/ld+json">
       ${JSON.stringify({
@@ -61,7 +69,7 @@ const server = createServer((request, response) => {
         ],
       })}
       </script></head><body>
-      <main><article><h1>Плескавица</h1><p>${'Вкусный балканский рецепт для ужина. '.repeat(20)}</p></article></main>
+      <main><article><h1>Плескавица</h1><p>${'Вкусный балканский ужин для всей семьи. '.repeat(10)}</p></article></main>
       <div class="recipe"><h2>Ингредиенты</h2><ul><li>500 г фарша</li><li>1 луковица</li></ul>
       <ol><li>Смешайте фарш с луком.</li><li>Сформируйте котлеты и пожарьте.</li></ol></div>
       </body></html>`);
@@ -138,6 +146,12 @@ describe('recipe content safety', () => {
     const markdown = await run('/collapsed', true);
     expect(markdown).toContain('Cook the onion. Then serve the soup');
     expect(markdown).not.toContain('## Ingredients');
+  });
+
+  it('keeps page content wrapped in a page-level form but drops small forms', async () => {
+    const markdown = await run('/form-wrapped', true);
+    expect(markdown).toContain('Cook the onion. Then serve the soup');
+    expect(markdown).not.toContain('Search recipes');
   });
 
   it('uses the full page when Readability misses recipe sections', async () => {

@@ -130,8 +130,7 @@ async function fetchFollowingRedirects(
     try {
       response = await fetch(currentUrl, {
         headers: {
-          'User-Agent':
-            'Mozilla/5.0 (compatible; RecipeParser/1.0; +https://example.com)',
+          'User-Agent': 'Mozilla/5.0 (compatible; RecipeParser/1.0)',
         },
         redirect: 'manual',
         signal,

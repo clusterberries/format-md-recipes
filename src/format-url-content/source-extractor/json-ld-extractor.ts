@@ -1,23 +1,91 @@
 import type * as cheerio from 'cheerio';
 import type { RecipeSchema } from '../images-parser/types.ts';
+import { logWarning } from '../logger.ts';
 import { MAX_SCHEMA_RECURSION_DEPTH } from '../utils/dom-helpers.ts';
 import { flattenSchemaInstructions } from '../utils/schema-instructions.ts';
+
+const LEADING_WRAPPER_PATTERN =
+  /^\s*(?:<!--|\/\/\s*<!\[CDATA\[|\/\*\s*<!\[CDATA\[\s*\*\/|<!\[CDATA\[)/;
+const TRAILING_WRAPPER_PATTERN =
+  /(?:-->|\/\/\s*\]\]>|\/\*\s*\]\]>\s*\*\/|\]\]>)\s*$/;
+const TRAILING_COMMA_PATTERN = /\s*[}\]]/y;
 
 export function extractJsonLdRecipes($: cheerio.CheerioAPI): RecipeSchema[] {
   const recipes: RecipeSchema[] = [];
 
-  $('script[type="application/ld+json"]').each((_, script) => {
+  $('script[type*="ld+json" i]').each((_, script) => {
     const text = $(script).text().trim();
     if (!text) return;
 
-    try {
-      collectRecipeObjects(JSON.parse(text), recipes);
-    } catch {
-      // Ignore malformed JSON-LD and continue with the other sources.
-    }
+    const parsed = parseJsonLd(text);
+    if (parsed !== undefined) collectRecipeObjects(parsed, recipes);
   });
 
   return deduplicateRecipeObjects(recipes);
+}
+
+/** Pages often ship almost-valid JSON-LD; repair the common mistakes before giving up. */
+function parseJsonLd(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    try {
+      return JSON.parse(repairJson(text));
+    } catch (error) {
+      logWarning(
+        `Ignoring malformed JSON-LD: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return undefined;
+    }
+  }
+}
+
+/** Removes comment/CDATA wrappers and trailing commas, and escapes raw control characters in strings. */
+function repairJson(text: string): string {
+  const source = text
+    .replace(LEADING_WRAPPER_PATTERN, '')
+    .replace(TRAILING_WRAPPER_PATTERN, '');
+  let result = '';
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < source.length; index++) {
+    const char = source[index]!;
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        result += char;
+        continue;
+      }
+      if (char === '\\') escaped = true;
+      else if (char === '"') inString = false;
+      result += char < ' ' ? escapeControlCharacter(char) : char;
+      continue;
+    }
+
+    if (char === ',') {
+      TRAILING_COMMA_PATTERN.lastIndex = index + 1;
+      if (TRAILING_COMMA_PATTERN.test(source)) continue;
+    }
+    if (char === '"') inString = true;
+    result += char;
+  }
+
+  return result;
+}
+
+function escapeControlCharacter(char: string): string {
+  switch (char) {
+    case '\n':
+      return '\\n';
+    case '\r':
+      return '\\r';
+    case '\t':
+      return '\\t';
+    default:
+      return `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`;
+  }
 }
 
 function collectRecipeObjects(

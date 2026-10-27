@@ -64,16 +64,23 @@ export function extractCandidateMetaFields(
   });
 }
 
+// Case-sensitive on purpose: a capitalised name distinguishes "by Jane Doe" from "by the Sea".
+const AUTHOR_AFTER_SEPARATOR_PATTERN = /\s*[,|·–—-]\s*(?:[Оо]т|[Bb]y)\s+.+$/u;
+const AUTHOR_NAME_PATTERN =
+  /\s+(?:[Оо]т|[Bb]y)\s+\p{Lu}[\p{L}.'’-]*(?:\s+(?:\p{Lu}[\p{L}.'’-]*|сайт|site)){0,2}$/u;
+const SEO_DESCRIPTION_MAX_LENGTH = 300;
+
 export function cleanRecipeTitle(
   value: string | null | undefined,
 ): string | null {
   if (!value) return null;
   const cleaned = value
-    .replace(/\s+(?:от|by)\s+.+$/i, '')
     .replace(
       /\s*[-–—]\s*(?:.*(?:сайт|site)|рецепт(?:\s+с\s+фото)?(?:\s+пошагово)?|recipe(?:\s+with\s+photo)?(?:\s+step\s+by\s+step)?)\s*$/i,
       '',
     )
+    .replace(AUTHOR_AFTER_SEPARATOR_PATTERN, '')
+    .replace(AUTHOR_NAME_PATTERN, '')
     .trim();
   return cleaned || null;
 }
@@ -83,18 +90,21 @@ export function cleanRecipeDescription(
 ): string | null {
   if (!value) return null;
   const text = value.replace(/\s+/g, ' ').trim();
+  // Boilerplate is short; a long description that mentions photos is real content.
+  const mayBeSeoBoilerplate = text.length <= SEO_DESCRIPTION_MAX_LENGTH;
+
   if (/^(?:как приготовить(?: блюдо)?|рецепт\s+|recipe\s+)/i.test(text)) {
-    const withoutLead = text
-      .replace(/^(?:как приготовить блюдо\s+|рецепт\s+|recipe\s+)/i, '')
-      .trim();
-    if (!withoutLead) return null;
-    if (/(?:пошагово|step[- ]?by[- ]?step|с фото|with photo)/i.test(text)) {
+    if (
+      mayBeSeoBoilerplate &&
+      /(?:пошагово|step[- ]?by[- ]?step|с фото|with photo)/i.test(text)
+    ) {
       return null;
     }
-    return withoutLead;
+    return text.replace(/^как приготовить блюдо\s+/i, '').trim() || null;
   }
 
   if (
+    mayBeSeoBoilerplate &&
     /(?:пошаговый рецепт|поиск по ингредиентам|пошагово.*с фото)/i.test(text)
   ) {
     return null;
@@ -105,7 +115,11 @@ export function cleanRecipeDescription(
       /\s+(?:от автора|от\s+автора)\s+.*?(?:на сайте|on the site).*$/i,
       '',
     )
-    .replace(/\s+\(.*?\)\s*$/g, '')
+    // Only parentheses that advertise the site or photos, not "(serves 4)".
+    .replace(
+      /\s+\([^()]*(?:сайт|фото|рецепт|site|photo|recipe)[^()]*\)\s*$/i,
+      '',
+    )
     .replace(/\s+/g, ' ')
     .trim();
   return cleaned || null;

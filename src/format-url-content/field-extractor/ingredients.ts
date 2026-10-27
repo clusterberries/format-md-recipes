@@ -12,7 +12,8 @@ export function extractIngredients(
 
   sources.jsonLd.forEach((recipe, recipeIndex) => {
     toStrings(recipe.recipeIngredient).forEach((text, index) => {
-      if (!isLikelyIngredientText(text)) return;
+      // Author-supplied structured data is trusted; the heuristics below target scraped HTML.
+      if (text.length < 2) return;
       ingredients.push(
         createIngredient(
           text,
@@ -124,7 +125,13 @@ function isLikelyIngredientText(value: string): boolean {
     )
   )
     return false;
-  if (/(?:kcal|kkal|ккал|калори(?:я|и|й))/i.test(text)) return false;
+  // Nutrition facts only ("120 kcal", "Калорийность: 5"), not "малокалорийные сливки".
+  if (
+    /\d\s*(?:kcal|kkal|ккал)(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])(?:калорийность|калории|calories|kcal|kkal|ккал)\s*(?:[:–-]|$)/iu.test(
+      text,
+    )
+  )
+    return false;
   if (
     /^(?:не выключать экран|выключать экран|подписаться|реклама|ждать|обновить|просто|subscribe|advertisement|do not turn off (?:the )?screen|keep (?:the )?screen on|wait|refresh|just)$/i.test(
       text,
@@ -132,7 +139,10 @@ function isLikelyIngredientText(value: string): boolean {
   )
     return false;
   if (/^\(.*\)$/i.test(text)) return false;
-  if (/\b(?:гр|г|кг|шт|мл|л)\b/i.test(text) && text.split(/\s+/).length <= 2)
+  if (
+    /(?<![\p{L}\p{N}])(?:гр|г|кг|шт|мл|л)(?![\p{L}\p{N}])/iu.test(text) &&
+    text.split(/\s+/).length <= 2
+  )
     return false;
   if (
     /\b(?:prep|cook|total)\s*time\b|время\s+(?:приготовления|подготовки)/i.test(

@@ -51,11 +51,14 @@ export const MAIN_CONTENT_SELECTOR = [
   '#main',
 ];
 
+// JS `\b` is ASCII-only, so Unicode-aware lookarounds are required for Cyrillic.
+// Cookie/banner words are matched only in noise-specific forms: "cookie-ingredients" and
+// "recipe-banner" are recipe content.
 export const MINIMAL_NOISE_PATTERN =
-  /\b(ad|ads|advert|advertisement|banner|cookie|consent|cmp|gdpr|newsletter|subscribe|popup|modal|paywall|social-share|share-buttons?)\b/i;
+  /(?<![a-z0-9])(?:ads?|advert(?:isement)?|cookie[-_ ]?(?:banner|consent|notice|law|bar|popup|settings|wall)|cookiebot|consent|cmp|gdpr|newsletter|subscribe|popup|modal|paywall|social-share|share-buttons?|(?:ads?|promo)[-_ ]banner|banner[-_ ]ads?)(?![a-z0-9])/i;
 
 export const RECIPE_SIGNAL_PATTERN =
-  /\b(recipe|ingredients?|instructions?|directions?|method|preparation|steps?|how-to|ингредиент|приготовлен|инструкц|рецепт|шаг)\b/i;
+  /(?<![\p{L}\p{N}])(?:recipe|ingredients?|instructions?|directions?|method|preparation|steps?|how-to|(?:ингредиент|приготовлен|инструкц|рецепт|шаг)\p{L}*)(?![\p{L}\p{N}])/iu;
 
 export const RECIPE_PROTECTION_SELECTOR =
   '[itemtype*="Recipe"], [itemprop="recipeIngredient"], [itemprop="recipeInstructions"]';
@@ -86,4 +89,5 @@ export const REMOVABLE_EMPTY_SELECTOR = [
 
 export const CLEANUP_PASSES = 4;
 export const MAX_RECIPE_TEXT_LENGTH = 1_500;
+export const MIN_WRAPPER_FORM_TEXT_LENGTH = 1_000;
 export const RECIPE_SIGNAL_TEXT_LENGTH = 3_000;

@@ -7,7 +7,7 @@ export function extractSchemaMainImages(
   pageUrl: string,
 ): RecipeImage[] {
   const imageValues = extractImageUrlsFromUnknown(schema.image, pageUrl).filter(
-    isUsableImageUrl,
+    (url) => isUsableImageUrl(url, { checkNoise: false }),
   );
 
   return imageValues.map((url, index) => ({
@@ -25,7 +25,7 @@ export function extractSchemaStepImages(
 
   const rawStepImages = steps.flatMap((step, stepIndex) => {
     const urls = extractImageUrlsFromUnknown(step.image, pageUrl).filter(
-      isUsableImageUrl,
+      (url) => isUsableImageUrl(url, { checkNoise: false }),
     );
 
     return urls.map((url) => ({

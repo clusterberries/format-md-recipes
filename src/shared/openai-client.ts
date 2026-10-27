@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 
+const REQUEST_TIMEOUT_MS = 120_000;
+
 export interface OpenAIRequestOptions {
   systemPrompt?: string;
   maxCompletionTokens?: number;
@@ -17,7 +19,7 @@ export async function callOpenAI(
     );
   }
 
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({ apiKey, timeout: REQUEST_TIMEOUT_MS });
   const completion = await client.chat.completions.create({
     model,
     messages: [
@@ -31,7 +33,16 @@ export async function callOpenAI(
     max_completion_tokens: options.maxCompletionTokens ?? 3000,
   });
 
-  const content = completion.choices?.[0]?.message?.content ?? '';
+  const choice = completion.choices?.[0];
+  if (choice?.message?.refusal) {
+    throw new Error(`The model refused the request: ${choice.message.refusal}`);
+  }
+  // A cut-off response can still look valid, so it must never be used.
+  if (choice?.finish_reason === 'length') {
+    throw new Error(
+      'The model response was truncated (max_completion_tokens reached).',
+    );
+  }
 
-  return content.trim();
+  return (choice?.message?.content ?? '').trim();
 }

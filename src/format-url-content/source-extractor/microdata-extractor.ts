@@ -21,9 +21,9 @@ export function extractMicrodataCandidates(
       source: 'microdata',
       location: `itemtype-recipe-${index}`,
       context: extractCandidateContext($, element),
-      title: extractElementValue($root.find('[itemprop="name" i]').first()),
+      title: extractElementValue(findOwnProperty($, $root, 'name')),
       description: extractElementValue(
-        $root.find('[itemprop="description" i]').first(),
+        findOwnProperty($, $root, 'description'),
       ),
       ingredients: extractMicrodataIngredients($, $root),
       instructions: extractMicrodataInstructions($, $root),
@@ -43,6 +43,24 @@ export function extractMicrodataCandidates(
   });
 
   return candidates.filter(hasRecipeContent);
+}
+
+/** First property that belongs to the recipe itself, not to a nested item such as the author. */
+function findOwnProperty(
+  $: cheerio.CheerioAPI,
+  $root: cheerio.Cheerio<Element>,
+  property: string,
+): cheerio.Cheerio<Element> {
+  const matches = $root.find(`[itemprop="${property}" i]`);
+  const root = $root.get(0);
+  // Without an explicit itemscope on the root the ownership cannot be determined.
+  if (!root || !$root.is('[itemscope]')) return matches.first();
+  return matches
+    .filter(
+      (_, element) =>
+        $(element).parent().closest('[itemscope]').get(0) === root,
+    )
+    .first();
 }
 
 function extractMicrodataIngredients(

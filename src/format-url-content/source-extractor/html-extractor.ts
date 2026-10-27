@@ -256,15 +256,14 @@ function extractHtmlRecipeMeta(
         return;
       }
 
-      const durationMatch = text.match(
-        /(?:(\d+)\s*(?:ч\.?|час(?:а|ов)?))?\s*(?:(\d+)\s*мин)/i,
+      // The lookahead keeps "чел" (people) from being read as hours.
+      const hoursMatch = text.match(
+        /(\d+)\s*(?:ч\.?|час(?:а|ов)?)(?![\p{L}])/iu,
       );
       const minutesMatch = text.match(/(\d+)\s*мин/i);
-      if (minutesMatch && !meta.totalTime) {
-        const hours = durationMatch?.[1] ? Number(durationMatch[1]) : 0;
-        const minutes = durationMatch?.[2]
-          ? Number(durationMatch[2])
-          : Number(minutesMatch[1]);
+      if ((hoursMatch || minutesMatch) && !meta.totalTime) {
+        const hours = hoursMatch ? Number(hoursMatch[1]) : 0;
+        const minutes = minutesMatch ? Number(minutesMatch[1]) : 0;
         meta.totalTime = hours
           ? `PT${hours}H${minutes ? `${minutes}M` : ''}`
           : `PT${minutes}M`;

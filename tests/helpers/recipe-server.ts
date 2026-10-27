@@ -50,6 +50,12 @@ export const fixtures = [
   'schema-incomplete-alternative',
   'schema-duplicates',
   'schema-malformed',
+  'schema-image-noise-words',
+  'microdata-own-properties',
+  'html-meta-hours-only',
+  'schema-repairable-json-ld',
+  'schema-text-not-rejected',
+  'html-partial-step-images',
 ];
 
 // Store readable UTF-8 HTML; encode the actual HTTP response for these cases.
